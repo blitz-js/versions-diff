@@ -327,7 +327,7 @@ index 178476699..ba7c5b5e1 100644
 diff --git a/RnDiffApp/.prettierrc.js b/RnDiffApp/.prettierrc.js
 deleted file mode 100644
 index 5c4de1a4f..000000000
---- a/RnDiffApp/_prettierrc.js
+--- a/RnDiffApp/.prettierrc.js
 +++ /dev/null
 @@ -1,6 +0,0 @@
 -module.exports = {
