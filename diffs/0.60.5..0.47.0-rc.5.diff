@@ -308,7 +308,7 @@ index 178476699..ba7c5b5e1 100644
 +    <Index />
 +  );
  });
-diff --git a/RnDiffApp/_prettierrc.js b/RnDiffApp/_prettierrc.js
+diff --git a/RnDiffApp/.prettierrc.js b/RnDiffApp/.prettierrc.js
 deleted file mode 100644
 index 5c4de1a4f..000000000
 --- a/RnDiffApp/_prettierrc.js

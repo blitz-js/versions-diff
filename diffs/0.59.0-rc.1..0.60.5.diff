@@ -265,7 +265,7 @@ index 171d0f0f4..a0076ec35 100644
  });
 +
 +export default App;
-diff --git a/RnDiffApp/_prettierrc.js b/RnDiffApp/_prettierrc.js
+diff --git a/RnDiffApp/.prettierrc.js b/RnDiffApp/.prettierrc.js
 new file mode 100644
 index 000000000..5c4de1a4f
 --- /dev/null

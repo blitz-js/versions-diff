@@ -312,7 +312,7 @@ index d0b9ee316..178476699 100644
 -  );
 +  renderer.create(<App />);
  });
-diff --git a/RnDiffApp/_prettierrc.js b/RnDiffApp/_prettierrc.js
+diff --git a/RnDiffApp/.prettierrc.js b/RnDiffApp/.prettierrc.js
 new file mode 100644
 index 000000000..5c4de1a4f
 --- /dev/null

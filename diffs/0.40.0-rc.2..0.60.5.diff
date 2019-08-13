@@ -325,7 +325,7 @@ index b49b9087f..000000000
 -    <Index />
 -  );
 -});
-diff --git a/RnDiffApp/_prettierrc.js b/RnDiffApp/_prettierrc.js
+diff --git a/RnDiffApp/.prettierrc.js b/RnDiffApp/.prettierrc.js
 new file mode 100644
 index 000000000..5c4de1a4f
 --- /dev/null

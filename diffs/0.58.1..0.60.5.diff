@@ -289,7 +289,7 @@ index a79ec3d58..178476699 100644
   */
  
  import 'react-native';
-diff --git a/RnDiffApp/_prettierrc.js b/RnDiffApp/_prettierrc.js
+diff --git a/RnDiffApp/.prettierrc.js b/RnDiffApp/.prettierrc.js
 new file mode 100644
 index 000000000..5c4de1a4f
 --- /dev/null

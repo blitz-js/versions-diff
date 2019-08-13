@@ -379,7 +379,7 @@ index 178476699..000000000
 -it('renders correctly', () => {
 -  renderer.create(<App />);
 -});
-diff --git a/RnDiffApp/_prettierrc.js b/RnDiffApp/_prettierrc.js
+diff --git a/RnDiffApp/.prettierrc.js b/RnDiffApp/.prettierrc.js
 deleted file mode 100644
 index 5c4de1a4f..000000000
 --- a/RnDiffApp/_prettierrc.js
