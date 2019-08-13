@@ -325,7 +325,7 @@ diff --git a/RnDiffApp/_prettierrc.js b/RnDiffApp/_prettierrc.js
 new file mode 100644
 index 000000000..5c4de1a4f
 --- /dev/null
-+++ b/RnDiffApp/_prettierrc.js
++++ b/RnDiffApp/.prettierrc.js
 @@ -0,0 +1,6 @@
 +module.exports = {
 +  bracketSpacing: false,
