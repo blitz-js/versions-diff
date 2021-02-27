@@ -5,7 +5,7 @@ set -euxo pipefail
 ErrorReleaseExists=2
 ErrorReleaseArgMissing=3
 
-AppName=RnDiffApp
+AppName=BlitzDiffApp
 AppBaseBranch=app-base
 ReleasesFile=RELEASES
 ReadmeFile=README.md
@@ -49,7 +49,8 @@ function generateNewReleaseBranch () {
     git checkout -b "$branchName"
 
     # generate app
-   npx @react-native-community/cli init "$AppName" --version "$newRelease"
+   npx blitz@"$newRelease" new "$AppName"
+   echo "npx blitz@"$newRelease" new "$AppName""
 
     # commit and push branch
     git add "$AppName"
