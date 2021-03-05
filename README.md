@@ -31,10 +31,11 @@ Probably having some nice alternating row color, having the leftest column stay 
 
 ## Diff table (full table [HERE](https://react-native-community.github.io/rn-diff-purge/))
 
-| From->To | P                                                                                            | U   | R   | G   | E   |     | T   | I   | M   | E   | !   | !   |
-| -------- | -------------------------------------------------------------------------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.30.5   | X                                                                                            | -   |     |     |     |     |     |     |     |     |     |     |
-| 0.30.4   | [->0.30.5](https://github.com/blitz-js/versions-diff/compare/release/0.30.4..release/0.30.5) | X   |     |     |     |     |     |     |     |     |     |     |
+| From->To | P                                                                                            | U                                                                                            | R   | G   | E   |     | T   | I   | M   | E   | !   | !   |
+| -------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.30.5   | X                                                                                            | -                                                                                            | -   |     |     |     |     |     |     |     |     |     |
+| 0.30.4   | [->0.30.5](https://github.com/blitz-js/versions-diff/compare/release/0.30.4..release/0.30.5) | X                                                                                            | -   |     |     |     |     |     |     |     |     |     |
+| 0.30.3   | [->0.30.5](https://github.com/blitz-js/versions-diff/compare/release/0.30.3..release/0.30.5) | [->0.30.4](https://github.com/blitz-js/versions-diff/compare/release/0.30.3..release/0.30.4) | X   |     |     |     |     |     |     |     |     |     |
 
 ## To see the full table containing all releases click [HERE](https://react-native-community.github.io/rn-diff-purge/)
 
