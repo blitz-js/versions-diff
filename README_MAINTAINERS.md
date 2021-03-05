@@ -1,7 +1,7 @@
 # Instructions for diff generation on new release
 ###### (assuming you have push permissions)
 
-When a new release of `react-native` is out on [npm](https://www.npmjs.com/package/react-native), do the following:
+When a new release of `blitz-js` is out on [npm](https://www.npmjs.com/package/blitz), do the following:
 
 - Clone the repo, or pull the latest `master` if you have it already cloned.
 

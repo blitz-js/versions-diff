@@ -1,6 +1,6 @@
-# RN diff PURGE
+# Blitz-js diff PURGE
 
-This repository exposes an untouched React Native app generated with the CLI
+This repository exposes an untouched Blitz app generated with the CLI
 `npx @react-native-community/cli init RnDiffApp`. Each new React Native release causes a new project to be created, removing the old one, and getting a diff between them. This way, the diff is always clean, always in sync with the changes of the init template.
 
 A dedicated branch per release makes changes very easy
