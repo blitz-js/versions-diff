@@ -14,14 +14,13 @@ const generateTable = async () => {
     const input = await getStdin()
     const releases = R.dropLast(1, R.split('\n')(input))
 
-    // words or phrases of length 12
     const comments = [
-        'react native',
+        'blitz    ftw',
         'this is cool',
         'purge time!!',
         'i love diffs',
         'diffs == fun',
-        'rn core team',
+        'blitz   team',
     ]
 
     const diffTable = [
