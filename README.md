@@ -17,10 +17,9 @@ https://react-native-community.github.io/upgrade-helper/
 
 ## Diff table (full table [HERE](https://react-native-community.github.io/versions-diff-purge/))
 
-| From->To | T                                                                                            | H   | I   | S   |     | I   | S   |     | C   | O   | O   | L   |
-| -------- | -------------------------------------------------------------------------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.30.5   | X                                                                                            | -   |     |     |     |     |     |     |     |     |     |     |
-| 0.30.4   | [->0.30.5](https://github.com/blitz-js/versions-diff/compare/release/0.30.4..release/0.30.5) | X   |     |     |     |     |     |     |     |     |     |     |
+| From->To | B   | L   | I   | T   | Z   |     |     |     | T   | E   | A   | M   |
+| -------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.30.4   | X   |     |     |     |     |     |     |     |     |     |     |     |
 
 ## To see the full table containing all releases click [HERE](https://react-native-community.github.io/versions-diff-purge/)
 

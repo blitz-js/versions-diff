@@ -47,13 +47,13 @@ function generateNewReleaseBranch() {
     git checkout -b "$branchName"
 
     # generate app
-    npx blitz@"$newRelease" new "$AppName"
+    npx blitz@"$newRelease" new "$AppName" --no-git
 
     # commit and push branch
     git add "$AppName"
-    git commit -m "Release $newRelease"
-    git push origin --delete "$branchName" || git push origin "$branchName"
-    git push --set-upstream origin "$branchName"
+    git commit -m "Release $newRelease" --no-verify
+    git push origin --delete "$branchName" || git push origin "$branchName" --no-verify
+    git push --set-upstream origin "$branchName" --no-verify
 
     # go back to master
     cd ..
