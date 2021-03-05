@@ -1,0 +1,1 @@
+npx blitz@"$1" new $2 --no-git
