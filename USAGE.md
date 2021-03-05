@@ -1,4 +1,4 @@
-# Using rn-diff-purge
+# Using versions-diff-purge
 
 The git patches can be used as a replacement of `react-native-git-upgrade`. The procedure is
 straightforward and more trusted than using the upgrade command.
@@ -21,7 +21,7 @@ If it's more than that, you could try the alternative method below.
 Download the patch for your version, for example:
 
 ```shell
-curl https://github.com/react-native-community/rn-diff-purge/compare/release/0.29.0...release/0.30.0.diff > upgrade-rn.patch
+curl https://github.com/react-native-community/versions-diff-purge/compare/release/0.29.0...release/0.30.0.diff > upgrade-rn.patch
 ```
 
 #### 2 Prepare the patch
@@ -48,13 +48,13 @@ It could be interesting to fallback on a 3-way merge (option `--3way`) in order 
 conflicts with your favorite merge tool.
 
 To do this, git needs to know the blob referenced in the patch
-(line `index 4c88077..e49e881 100644` for example). So you have to add rn-diff as a remote
+(line `index 4c88077..e49e881 100644` for example). So you have to add versions-diff as a remote
 repository and fetch it (see this [SO question](http://stackoverflow.com/questions/33577383/git-apply-3way-error-repository-lacks-the-necessary-blob-to-fall-back-on-3-way)
 for details).
 
 ```shell
-git remote add rn-diff-purge https://github.com/react-native-community/rn-diff-purge.git
-git fetch rn-diff-purge
+git remote add versions-diff-purge https://github.com/react-native-community/versions-diff-purge.git
+git fetch versions-diff-purge
 ```
 
 #### 4 Run the apply command
@@ -67,7 +67,7 @@ git apply upgrade-rn.patch --exclude=package.json -p 2 --3way
 
 ```shell
 # Download the patch
-curl https://github.com/react-native-community/rn-diff-purge/compare/release/0.29.0...release/0.30.0.diff > upgrade-rn.patch
+curl https://github.com/react-native-community/versions-diff-purge/compare/release/0.29.0...release/0.30.0.diff > upgrade-rn.patch
 
 # Replace BlitzDiffApp occurences
 appNameCamelCase=MyApp
@@ -76,8 +76,8 @@ sed -i "" "s-ios/BlitzDiffApp-ios/${appNameCamelCase}-" upgrade-rn.patch
 sed -i "" "s-java/com/BlitzDiffApp-java/com/${appNameLowerCase}-" upgrade-rn.patch
 
 # Set up the 3-way merge
-git remote add rn-diff-purge https://github.com/react-native-community/rn-diff-purge.git
-git fetch rn-diff-purge
+git remote add versions-diff-purge https://github.com/react-native-community/versions-diff-purge.git
+git fetch versions-diff-purge
 
 # Run the apply command
 git apply upgrade-rn.patch --exclude=package.json -p 2 --3way

@@ -28,7 +28,7 @@ Trace:
 
 npm manifest: 
   {
-    "name": "rn-diff-purge",
+    "name": "versions-diff-purge",
     "version": "0.0.1",
     "license": "MIT",
     "scripts": {
