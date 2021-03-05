@@ -1,4 +1,4 @@
-# RN diff PURGE
+# Blitz Versions Diff
 
-This branch contains a blank React Native project.
-See the [documentation](https://github.com/pvinis/rn-diff-purge/blob/master/README.md) on master for details.
+This branch contains a blank Blitz project.
+See the [documentation](https://github.com/blitz-js/versions-diff/blob/master/README.md) on master for details.

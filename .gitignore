@@ -1,7 +1,8 @@
 # macOS
 .DS_Store
 
+node_modules
+
 # lock files
-RnDiffApp/yarn.lock
-RnDiffApp/package-lock.json
-RnDiffApp/ios/Podfile.lock
+BlitzDiffApp/yarn.lock
+BlitzDiffApp/package-lock.json
