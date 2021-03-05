@@ -1,0 +1,7 @@
+diff --git a/BlitzDiffApp b/BlitzDiffApp
+index fc14546ce..0deb45fcd 160000
+--- a/BlitzDiffApp
++++ b/BlitzDiffApp
+@@ -1 +1 @@
+-Subproject commit fc14546ce25bcf96a44c3df8173aae6d2c5ec670
++Subproject commit 0deb45fcd40aa5a9de79d4c25325a41a3719af2e
