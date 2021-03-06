@@ -1,0 +1,39 @@
+diff --git a/BlitzDiffApp/app/auth/auth-utils.ts b/BlitzDiffApp/app/auth/auth-utils.ts
+index 90db006d1..df23a2808 100644
+--- a/BlitzDiffApp/app/auth/auth-utils.ts
++++ b/BlitzDiffApp/app/auth/auth-utils.ts
+@@ -18,7 +18,7 @@ export const verifyPassword = async (hashedPassword: string, password: string) =
+ }
+ 
+ export const authenticateUser = async (email: string, password: string) => {
+-  const user = await db.user.findOne({ where: { email: email.toLowerCase() } })
++  const user = await db.user.findFirst({ where: { email: email.toLowerCase() } })
+ 
+   if (!user || !user.hashedPassword) throw new AuthenticationError()
+ 
+diff --git a/BlitzDiffApp/app/users/queries/getCurrentUser.ts b/BlitzDiffApp/app/users/queries/getCurrentUser.ts
+index da5748deb..9822e16bf 100644
+--- a/BlitzDiffApp/app/users/queries/getCurrentUser.ts
++++ b/BlitzDiffApp/app/users/queries/getCurrentUser.ts
+@@ -4,7 +4,7 @@ import db from "db"
+ export default async function getCurrentUser(_ = null, { session }: Ctx) {
+   if (!session.userId) return null
+ 
+-  const user = await db.user.findOne({
++  const user = await db.user.findFirst({
+     where: { id: session.userId },
+     select: { id: true, name: true, email: true, role: true },
+   })
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index f659cf960..fa6a8f436 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -33,7 +33,7 @@
+   "dependencies": {
+     "@prisma/cli": "2.18.0",
+     "@prisma/client": "2.18.0",
+-    "blitz": "0.30.0-canary.15",
++    "blitz": "0.31.1",
+     "react": "0.0.0-experimental-4ead6b530",
+     "react-dom": "0.0.0-experimental-4ead6b530",
+     "react-error-boundary": "2.3.2",
