@@ -1,0 +1,136 @@
+diff --git a/BlitzDiffApp/.gitignore b/BlitzDiffApp/.gitignore
+index 3665bf5ce..70053f9b5 100644
+--- a/BlitzDiffApp/.gitignore
++++ b/BlitzDiffApp/.gitignore
+@@ -11,6 +11,7 @@ web_modules/
+ /.blitz/
+ /.next/
+ *.sqlite
++*.sqlite-journal
+ .now
+ .blitz-console-history
+ blitz-log.log
+diff --git a/BlitzDiffApp/README.md b/BlitzDiffApp/README.md
+index 6d780988c..e269be399 100644
+--- a/BlitzDiffApp/README.md
++++ b/BlitzDiffApp/README.md
+@@ -66,20 +66,6 @@ Here is the starting structure of your app.
+ ```
+ BlitzDiffApp
+ ├── app/
+-│   ├── core/
+-│   │   ├── components/
+-│   │   │   ├── Form.tsx
+-│   │   │   └── LabeledTextField.tsx
+-│   │   ├── hooks/
+-│   │   │   └── useCurrentUser.ts
+-│   │   └── layouts/
+-│   │       └── Layout.tsx
+-│   ├── pages/
+-│   │   ├── 404.tsx
+-│   │   ├── _app.tsx
+-│   │   ├── _document.tsx
+-│   │   ├── index.test.tsx
+-│   │   └── index.tsx
+ │   ├── api/
+ │   ├── auth/
+ │   │   ├── components/
+@@ -87,13 +73,33 @@ BlitzDiffApp
+ │   │   │   └── SignupForm.tsx
+ │   │   ├── mutations/
+ │   │   │   ├── changePassword.ts
++│   │   │   ├── forgotPassword.test.ts
++│   │   │   ├── forgotPassword.ts
+ │   │   │   ├── login.ts
+ │   │   │   ├── logout.ts
++│   │   │   ├── resetPassword.test.ts
++│   │   │   ├── resetPassword.ts
+ │   │   │   └── signup.ts
+ │   │   ├── pages/
++│   │   │   ├── forgot-password.tsx
+ │   │   │   ├── login.tsx
++│   │   │   ├── reset-password.tsx
+ │   │   │   └── signup.tsx
+ │   │   └── validations.ts
++│   ├── core/
++│   │   ├── components/
++│   │   │   ├── Form.tsx
++│   │   │   └── LabeledTextField.tsx
++│   │   ├── hooks/
++│   │   │   └── useCurrentUser.ts
++│   │   └── layouts/
++│   │       └── Layout.tsx
++│   ├── pages/
++│   │   ├── 404.tsx
++│   │   ├── _app.tsx
++│   │   ├── _document.tsx
++│   │   ├── index.test.tsx
++│   │   └── index.tsx
+ │   └── users/
+ │       └── queries/
+ │           └── getCurrentUser.ts
+@@ -102,6 +108,8 @@ BlitzDiffApp
+ │   ├── schema.prisma
+ │   └── seeds.ts
+ ├── integrations/
++├── mailers/
++│   └── forgotPasswordMailer.ts
+ ├── public/
+ │   ├── favicon.ico*
+ │   └── logo.png
+@@ -114,6 +122,7 @@ BlitzDiffApp
+ ├── jest.config.js
+ ├── package.json
+ ├── tsconfig.json
++├── types.d.ts
+ ├── types.ts
+ └── yarn.lock
+ ```
+diff --git a/BlitzDiffApp/db/db.sqlite-journal b/BlitzDiffApp/db/db.sqlite-journal
+deleted file mode 100644
+index c7c9bb81d05877ee1f2f8fc2f62f2bdd6840ade5..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 8720
+zcmeI$JxW7C6b0aU5{n2DwQ>^==HB^Vgr#+uc{4W*Y66nNHn@XqB86+RcMVoP+(H_`
+zb2#;d^OaXA<ev*%T+aZ*>PgK-AOHafKmY;|fB*y_009U<00Iy=U*K>zTs<C^>OrZ?
+zrD4gAq>jOH8ZFl{rbc!&IZ%z{gsB8cWSC5xB$d+aM8;=ZC)<j5m6MH;#N_H@<Ces6
+z%!LDa7buFbX3|D`tyw$0?%Tfa`FZ`)H?Mi$ciZ7@@%8@saeq3_(|-Q|>gN2BxBvkN
+bKmY;|fB*y_009U<00Izzz~2?P{noo5x;!n>
+
+diff --git a/BlitzDiffApp/db/migrations/20210306002050_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306005135_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306002050_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306005135_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index d89905bb9..2bf16e494 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -31,11 +31,11 @@
+   "dependencies": {
+     "prisma": "~2.17",
+     "@prisma/client": "~2.17",
+-    "blitz": "0.30.0-canary.15",
++    "blitz": "0.31.1",
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+     "react-error-boundary": "3.1.1",
+-    "typescript": "4.2.3",
++    "typescript": "~4.1",
+     "zod": "1.11.11",
+     "final-form": "4.20.2",
+     "react-final-form": "6.5.2"
+diff --git a/BlitzDiffApp/test/utils.tsx b/BlitzDiffApp/test/utils.tsx
+index 6fe4d681f..4bdf86ac3 100644
+--- a/BlitzDiffApp/test/utils.tsx
++++ b/BlitzDiffApp/test/utils.tsx
+@@ -70,6 +70,7 @@ export const mockRouter: BlitzRouter = {
+   params: {},
+   query: {},
+   isReady: true,
++  isLocaleDomain: false,
+   push: jest.fn(),
+   replace: jest.fn(),
+   reload: jest.fn(),
