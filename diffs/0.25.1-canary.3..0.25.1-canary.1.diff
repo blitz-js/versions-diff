@@ -1,0 +1,10 @@
+diff --git a/BlitzDiffApp/.prettierignore b/BlitzDiffApp/.prettierignore
+index ad8c486b6..c61fdf72d 100644
+--- a/BlitzDiffApp/.prettierignore
++++ b/BlitzDiffApp/.prettierignore
+@@ -3,5 +3,3 @@
+ *.ico
+ *.lock
+ db/migrations
+-.next
+-.blitz
