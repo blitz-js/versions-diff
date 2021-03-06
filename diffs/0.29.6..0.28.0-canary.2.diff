@@ -1,0 +1,722 @@
+diff --git a/BlitzDiffApp/app/auth/auth-utils.ts b/BlitzDiffApp/app/auth/auth-utils.ts
+index c0e8a2d82..f5a851738 100644
+--- a/BlitzDiffApp/app/auth/auth-utils.ts
++++ b/BlitzDiffApp/app/auth/auth-utils.ts
+@@ -1,16 +1,37 @@
+-import { SecurePassword, AuthenticationError } from "blitz"
++import { AuthenticationError } from "blitz"
++import SecurePassword from "secure-password"
+ import db from "db"
+ 
++const SP = () => new SecurePassword()
++
++export const hashPassword = async (password: string) => {
++  const hashedBuffer = await SP().hash(Buffer.from(password))
++  return hashedBuffer.toString("base64")
++}
++export const verifyPassword = async (hashedPassword: string, password: string) => {
++  try {
++    return await SP().verify(Buffer.from(password), Buffer.from(hashedPassword, "base64"))
++  } catch (error) {
++    console.error(error)
++    return false
++  }
++}
++
+ export const authenticateUser = async (email: string, password: string) => {
+-  const user = await db.user.findFirst({ where: { email } })
+-  if (!user) throw new AuthenticationError()
++  const user = await db.user.findFirst({ where: { email: email.toLowerCase() } })
+ 
+-  const result = await SecurePassword.verify(user.hashedPassword, password)
++  if (!user || !user.hashedPassword) throw new AuthenticationError()
+ 
+-  if (result === SecurePassword.VALID_NEEDS_REHASH) {
+-    // Upgrade hashed password with a more secure hash
+-    const improvedHash = await SecurePassword.hash(password)
+-    await db.user.update({ where: { id: user.id }, data: { hashedPassword: improvedHash } })
++  switch (await verifyPassword(user.hashedPassword, password)) {
++    case SecurePassword.VALID:
++      break
++    case SecurePassword.VALID_NEEDS_REHASH:
++      // Upgrade hashed password with a more secure hash
++      const improvedHash = await hashPassword(password)
++      await db.user.update({ where: { id: user.id }, data: { hashedPassword: improvedHash } })
++      break
++    default:
++      throw new AuthenticationError()
+   }
+ 
+   const { hashedPassword, ...rest } = user
+diff --git a/BlitzDiffApp/app/auth/mutations/signup.ts b/BlitzDiffApp/app/auth/mutations/signup.ts
+index d4b152db4..65895fe0a 100644
+--- a/BlitzDiffApp/app/auth/mutations/signup.ts
++++ b/BlitzDiffApp/app/auth/mutations/signup.ts
+@@ -1,12 +1,13 @@
+-import { Ctx, SecurePassword } from "blitz"
++import { Ctx } from "blitz"
+ import db from "db"
++import { hashPassword } from "app/auth/auth-utils"
+ import { SignupInput, SignupInputType } from "app/auth/validations"
+ 
+ export default async function signup(input: SignupInputType, { session }: Ctx) {
+   // This throws an error if input is invalid
+   const { email, password } = SignupInput.parse(input)
+ 
+-  const hashedPassword = await SecurePassword.hash(password)
++  const hashedPassword = await hashPassword(password)
+   const user = await db.user.create({
+     data: { email: email.toLowerCase(), hashedPassword, role: "user" },
+     select: { id: true, name: true, email: true, role: true },
+diff --git a/BlitzDiffApp/app/pages/index.tsx b/BlitzDiffApp/app/pages/index.tsx
+index 83d6d90dc..a31fee46f 100644
+--- a/BlitzDiffApp/app/pages/index.tsx
++++ b/BlitzDiffApp/app/pages/index.tsx
+@@ -74,7 +74,7 @@ const Home: BlitzPage = () => {
+           <code>blitz generate all project name:string</code>
+         </pre>
+         <pre>
+-          <code>blitz prisma migrate dev --preview-feature</code>
++          <code>blitz db migrate</code>
+         </pre>
+         <div>
+           <p>
+diff --git a/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql
+deleted file mode 100644
+index f3028fb44..000000000
+--- a/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql
++++ /dev/null
+@@ -1,31 +0,0 @@
+--- CreateTable
+-CREATE TABLE "User" (
+-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-    "updatedAt" DATETIME NOT NULL,
+-    "name" TEXT,
+-    "email" TEXT NOT NULL,
+-    "hashedPassword" TEXT,
+-    "role" TEXT NOT NULL DEFAULT 'user'
+-);
+-
+--- CreateTable
+-CREATE TABLE "Session" (
+-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-    "updatedAt" DATETIME NOT NULL,
+-    "expiresAt" DATETIME,
+-    "handle" TEXT NOT NULL,
+-    "userId" INTEGER,
+-    "hashedSessionToken" TEXT,
+-    "antiCSRFToken" TEXT,
+-    "publicData" TEXT,
+-    "privateData" TEXT,
+-    FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+-);
+-
+--- CreateIndex
+-CREATE UNIQUE INDEX "User.email_unique" ON "User"("email");
+-
+--- CreateIndex
+-CREATE UNIQUE INDEX "Session.handle_unique" ON "Session"("handle");
+diff --git a/BlitzDiffApp/db/migrations/20210306153807-initial-migration/README.md b/BlitzDiffApp/db/migrations/20210306153807-initial-migration/README.md
+new file mode 100644
+index 000000000..77585907c
+--- /dev/null
++++ b/BlitzDiffApp/db/migrations/20210306153807-initial-migration/README.md
+@@ -0,0 +1,87 @@
++# Migration `20210306153807-initial-migration`
++
++This migration has been generated by Matthieu PETIT at 3/6/2021, 4:38:07 PM.
++You can check out the [state of the schema](./schema.prisma) after the migration.
++
++## Database Steps
++
++```sql
++CREATE TABLE "User" (
++    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
++    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" DATETIME NOT NULL,
++    "name" TEXT,
++    "email" TEXT NOT NULL,
++    "hashedPassword" TEXT,
++    "role" TEXT NOT NULL DEFAULT 'user'
++)
++
++CREATE TABLE "Session" (
++    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
++    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" DATETIME NOT NULL,
++    "expiresAt" DATETIME,
++    "handle" TEXT NOT NULL,
++    "userId" INTEGER,
++    "hashedSessionToken" TEXT,
++    "antiCSRFToken" TEXT,
++    "publicData" TEXT,
++    "privateData" TEXT,
++
++    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
++)
++
++CREATE UNIQUE INDEX "User.email_unique" ON "User"("email")
++
++CREATE UNIQUE INDEX "Session.handle_unique" ON "Session"("handle")
++```
++
++## Changes
++
++```diff
++diff --git schema.prisma schema.prisma
++migration ..20210306153807-initial-migration
++--- datamodel.dml
+++++ datamodel.dml
++@@ -1,0 +1,38 @@
+++// This is your Prisma schema file,
+++// learn more about it in the docs: https://pris.ly/d/prisma-schema
+++
+++datasource db {
+++  provider = "sqlite"
+++  url = "***"
+++}
+++
+++generator client {
+++  provider = "prisma-client-js"
+++}
+++
+++// --------------------------------------
+++
+++model User {
+++  id             Int       @default(autoincrement()) @id
+++  createdAt      DateTime  @default(now())
+++  updatedAt      DateTime  @updatedAt
+++  name           String?
+++  email          String    @unique
+++  hashedPassword String?
+++  role           String    @default("user")
+++  sessions       Session[]
+++}
+++
+++model Session {
+++  id                 Int       @default(autoincrement()) @id
+++  createdAt          DateTime  @default(now())
+++  updatedAt          DateTime  @updatedAt
+++  expiresAt          DateTime?
+++  handle             String    @unique
+++  user               User?     @relation(fields: [userId], references: [id])
+++  userId             Int?
+++  hashedSessionToken String?
+++  antiCSRFToken      String?
+++  publicData         String?
+++  privateData        String?
+++}
++```
++
++
+diff --git a/BlitzDiffApp/db/migrations/20210306153807-initial-migration/schema.prisma b/BlitzDiffApp/db/migrations/20210306153807-initial-migration/schema.prisma
+new file mode 100644
+index 000000000..c0ce11a35
+--- /dev/null
++++ b/BlitzDiffApp/db/migrations/20210306153807-initial-migration/schema.prisma
+@@ -0,0 +1,38 @@
++// This is your Prisma schema file,
++// learn more about it in the docs: https://pris.ly/d/prisma-schema
++
++datasource db {
++  provider = "sqlite"
++  url = "***"
++}
++
++generator client {
++  provider = "prisma-client-js"
++}
++
++// --------------------------------------
++
++model User {
++  id             Int       @default(autoincrement()) @id
++  createdAt      DateTime  @default(now())
++  updatedAt      DateTime  @updatedAt
++  name           String?
++  email          String    @unique
++  hashedPassword String?
++  role           String    @default("user")
++  sessions       Session[]
++}
++
++model Session {
++  id                 Int       @default(autoincrement()) @id
++  createdAt          DateTime  @default(now())
++  updatedAt          DateTime  @updatedAt
++  expiresAt          DateTime?
++  handle             String    @unique
++  user               User?     @relation(fields: [userId], references: [id])
++  userId             Int?
++  hashedSessionToken String?
++  antiCSRFToken      String?
++  publicData         String?
++  privateData        String?
++}
+diff --git a/BlitzDiffApp/db/migrations/20210306153807-initial-migration/steps.json b/BlitzDiffApp/db/migrations/20210306153807-initial-migration/steps.json
+new file mode 100644
+index 000000000..0e8c23090
+--- /dev/null
++++ b/BlitzDiffApp/db/migrations/20210306153807-initial-migration/steps.json
+@@ -0,0 +1,398 @@
++{
++  "version": "0.3.14-fixed",
++  "steps": [
++    {
++      "tag": "CreateSource",
++      "source": "db"
++    },
++    {
++      "tag": "CreateArgument",
++      "location": {
++        "tag": "Source",
++        "source": "db"
++      },
++      "argument": "provider",
++      "value": "\"sqlite\""
++    },
++    {
++      "tag": "CreateArgument",
++      "location": {
++        "tag": "Source",
++        "source": "db"
++      },
++      "argument": "url",
++      "value": "\"***\""
++    },
++    {
++      "tag": "CreateModel",
++      "model": "User"
++    },
++    {
++      "tag": "CreateField",
++      "model": "User",
++      "field": "id",
++      "type": "Int",
++      "arity": "Required"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "User",
++          "field": "id"
++        },
++        "directive": "default"
++      }
++    },
++    {
++      "tag": "CreateArgument",
++      "location": {
++        "tag": "Directive",
++        "path": {
++          "tag": "Field",
++          "model": "User",
++          "field": "id"
++        },
++        "directive": "default"
++      },
++      "argument": "",
++      "value": "autoincrement()"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "User",
++          "field": "id"
++        },
++        "directive": "id"
++      }
++    },
++    {
++      "tag": "CreateField",
++      "model": "User",
++      "field": "createdAt",
++      "type": "DateTime",
++      "arity": "Required"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "User",
++          "field": "createdAt"
++        },
++        "directive": "default"
++      }
++    },
++    {
++      "tag": "CreateArgument",
++      "location": {
++        "tag": "Directive",
++        "path": {
++          "tag": "Field",
++          "model": "User",
++          "field": "createdAt"
++        },
++        "directive": "default"
++      },
++      "argument": "",
++      "value": "now()"
++    },
++    {
++      "tag": "CreateField",
++      "model": "User",
++      "field": "updatedAt",
++      "type": "DateTime",
++      "arity": "Required"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "User",
++          "field": "updatedAt"
++        },
++        "directive": "updatedAt"
++      }
++    },
++    {
++      "tag": "CreateField",
++      "model": "User",
++      "field": "name",
++      "type": "String",
++      "arity": "Optional"
++    },
++    {
++      "tag": "CreateField",
++      "model": "User",
++      "field": "email",
++      "type": "String",
++      "arity": "Required"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "User",
++          "field": "email"
++        },
++        "directive": "unique"
++      }
++    },
++    {
++      "tag": "CreateField",
++      "model": "User",
++      "field": "hashedPassword",
++      "type": "String",
++      "arity": "Optional"
++    },
++    {
++      "tag": "CreateField",
++      "model": "User",
++      "field": "role",
++      "type": "String",
++      "arity": "Required"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "User",
++          "field": "role"
++        },
++        "directive": "default"
++      }
++    },
++    {
++      "tag": "CreateArgument",
++      "location": {
++        "tag": "Directive",
++        "path": {
++          "tag": "Field",
++          "model": "User",
++          "field": "role"
++        },
++        "directive": "default"
++      },
++      "argument": "",
++      "value": "\"user\""
++    },
++    {
++      "tag": "CreateField",
++      "model": "User",
++      "field": "sessions",
++      "type": "Session",
++      "arity": "List"
++    },
++    {
++      "tag": "CreateModel",
++      "model": "Session"
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "id",
++      "type": "Int",
++      "arity": "Required"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "id"
++        },
++        "directive": "default"
++      }
++    },
++    {
++      "tag": "CreateArgument",
++      "location": {
++        "tag": "Directive",
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "id"
++        },
++        "directive": "default"
++      },
++      "argument": "",
++      "value": "autoincrement()"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "id"
++        },
++        "directive": "id"
++      }
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "createdAt",
++      "type": "DateTime",
++      "arity": "Required"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "createdAt"
++        },
++        "directive": "default"
++      }
++    },
++    {
++      "tag": "CreateArgument",
++      "location": {
++        "tag": "Directive",
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "createdAt"
++        },
++        "directive": "default"
++      },
++      "argument": "",
++      "value": "now()"
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "updatedAt",
++      "type": "DateTime",
++      "arity": "Required"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "updatedAt"
++        },
++        "directive": "updatedAt"
++      }
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "expiresAt",
++      "type": "DateTime",
++      "arity": "Optional"
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "handle",
++      "type": "String",
++      "arity": "Required"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "handle"
++        },
++        "directive": "unique"
++      }
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "user",
++      "type": "User",
++      "arity": "Optional"
++    },
++    {
++      "tag": "CreateDirective",
++      "location": {
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "user"
++        },
++        "directive": "relation"
++      }
++    },
++    {
++      "tag": "CreateArgument",
++      "location": {
++        "tag": "Directive",
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "user"
++        },
++        "directive": "relation"
++      },
++      "argument": "fields",
++      "value": "[userId]"
++    },
++    {
++      "tag": "CreateArgument",
++      "location": {
++        "tag": "Directive",
++        "path": {
++          "tag": "Field",
++          "model": "Session",
++          "field": "user"
++        },
++        "directive": "relation"
++      },
++      "argument": "references",
++      "value": "[id]"
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "userId",
++      "type": "Int",
++      "arity": "Optional"
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "hashedSessionToken",
++      "type": "String",
++      "arity": "Optional"
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "antiCSRFToken",
++      "type": "String",
++      "arity": "Optional"
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "publicData",
++      "type": "String",
++      "arity": "Optional"
++    },
++    {
++      "tag": "CreateField",
++      "model": "Session",
++      "field": "privateData",
++      "type": "String",
++      "arity": "Optional"
++    }
++  ]
++}
+\ No newline at end of file
+diff --git a/BlitzDiffApp/db/migrations/migrate.lock b/BlitzDiffApp/db/migrations/migrate.lock
+new file mode 100644
+index 000000000..f95dab305
+--- /dev/null
++++ b/BlitzDiffApp/db/migrations/migrate.lock
+@@ -0,0 +1,3 @@
++# Prisma Migrate lockfile v1
++
++20210306153807-initial-migration
+\ No newline at end of file
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index cdcb71e60..c44c2be65 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -3,7 +3,7 @@
+   "version": "1.0.0",
+   "scripts": {
+     "start": "blitz start",
+-    "studio": "blitz prisma studio",
++    "studio": "blitz db studio",
+     "build": "blitz build",
+     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx .",
+     "test": "jest",
+@@ -31,12 +31,13 @@
+     ]
+   },
+   "dependencies": {
+-    "@prisma/cli": "~2.14",
+-    "@prisma/client": "~2.14",
+-    "blitz": "0.31.1",
++    "@prisma/cli": "~2.12",
++    "@prisma/client": "~2.12",
++    "blitz": "0.30.0-canary.15",
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+     "react-error-boundary": "3.1.1",
++    "secure-password": "4.0.0",
+     "typescript": "4.2.3",
+     "zod": "1.11.11",
+     "final-form": "4.20.2",
+@@ -48,6 +49,7 @@
+     "@testing-library/react-hooks": "3.7.0",
+     "@types/jest": "26.0.20",
+     "@types/react": "17.0.2",
++    "@types/secure-password": "3.1.0",
+     "@typescript-eslint/eslint-plugin": "4.16.1",
+     "@typescript-eslint/parser": "4.16.1",
+     "babel-eslint": "10.1.0",
+diff --git a/BlitzDiffApp/test/utils.tsx b/BlitzDiffApp/test/utils.tsx
+index 856e68186..efdb66861 100644
+--- a/BlitzDiffApp/test/utils.tsx
++++ b/BlitzDiffApp/test/utils.tsx
+@@ -70,7 +70,6 @@ export const mockRouter: BlitzRouter = {
+   asPath: "/",
+   params: {},
+   query: {},
+-  isReady: true,
+   push: jest.fn(),
+   replace: jest.fn(),
+   reload: jest.fn(),
