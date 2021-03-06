@@ -1,0 +1,55 @@
+diff --git a/BlitzDiffApp/.gitignore b/BlitzDiffApp/.gitignore
+index 70053f9b5..3665bf5ce 100644
+--- a/BlitzDiffApp/.gitignore
++++ b/BlitzDiffApp/.gitignore
+@@ -11,7 +11,6 @@ web_modules/
+ /.blitz/
+ /.next/
+ *.sqlite
+-*.sqlite-journal
+ .now
+ .blitz-console-history
+ blitz-log.log
+diff --git a/BlitzDiffApp/db/db.sqlite-journal b/BlitzDiffApp/db/db.sqlite-journal
+new file mode 100644
+index 0000000000000000000000000000000000000000..0ec3a1d61ebe1670f602873c40e4611c07134d5f
+GIT binary patch
+literal 8720
+zcmeI$JxT;Y5Cz~K(O?Bx@g4(RRsHJ$%r-PKSh{Drq)}Ip4L03_coUD|8N7p;gICx@
+z@I5Ll3f>o%F~~m`IJ;T^hV_$K27v$sAOHafKmY;|fB*y_009U<;B<lG&2V{tT$znA
+z7b}TDChv5Nl67>g#xW<#qd4W_OQcp?)J(!8Y0_M4a}!A@Zl0Fy;AhS*B~mGKNR3-o
+z&#6?76nvzl%9hEB4c1a(zwNue@8x;>(jVW-zQ68<!}-_d_Wj}Gd#U#O2Qb&Cm&64K
+dKmY;|fB*y_009U<00Izz00jQ7z~S?5{R2!(Ex`Z)
+
+literal 0
+HcmV?d00001
+
+diff --git a/BlitzDiffApp/db/migrations/20210306005344_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306001825_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306005344_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306001825_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index 2bf16e494..abd00d886 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -35,7 +35,7 @@
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+     "react-error-boundary": "3.1.1",
+-    "typescript": "~4.1",
++    "typescript": "4.2.3",
+     "zod": "1.11.11",
+     "final-form": "4.20.2",
+     "react-final-form": "6.5.2"
+diff --git a/BlitzDiffApp/test/utils.tsx b/BlitzDiffApp/test/utils.tsx
+index 4bdf86ac3..6fe4d681f 100644
+--- a/BlitzDiffApp/test/utils.tsx
++++ b/BlitzDiffApp/test/utils.tsx
+@@ -70,7 +70,6 @@ export const mockRouter: BlitzRouter = {
+   params: {},
+   query: {},
+   isReady: true,
+-  isLocaleDomain: false,
+   push: jest.fn(),
+   replace: jest.fn(),
+   reload: jest.fn(),

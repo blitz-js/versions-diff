@@ -1,0 +1,17 @@
+diff --git a/BlitzDiffApp/db/migrations/20210306001133_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306005344_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306001133_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306005344_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index abd00d886..2bf16e494 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -35,7 +35,7 @@
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+     "react-error-boundary": "3.1.1",
+-    "typescript": "4.2.3",
++    "typescript": "~4.1",
+     "zod": "1.11.11",
+     "final-form": "4.20.2",
+     "react-final-form": "6.5.2"
