@@ -1,0 +1,4 @@
+diff --git a/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306013418_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306013418_initial_migration/migration.sql
