@@ -1,0 +1,17 @@
+diff --git a/BlitzDiffApp/db/migrations/20210306013615_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306012537_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306013615_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306012537_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index 387b0616e..cdcb71e60 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -3,7 +3,7 @@
+   "version": "1.0.0",
+   "scripts": {
+     "start": "blitz start",
+-    "studio": "blitz db studio",
++    "studio": "blitz prisma studio",
+     "build": "blitz build",
+     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx .",
+     "test": "jest",
