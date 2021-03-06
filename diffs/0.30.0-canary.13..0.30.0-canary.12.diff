@@ -1,0 +1,130 @@
+diff --git a/BlitzDiffApp/app/auth/components/LoginForm.tsx b/BlitzDiffApp/app/auth/components/LoginForm.tsx
+index 8861cf009..a3a6e4b66 100644
+--- a/BlitzDiffApp/app/auth/components/LoginForm.tsx
++++ b/BlitzDiffApp/app/auth/components/LoginForm.tsx
+@@ -1,3 +1,4 @@
++import React from "react"
+ import { AuthenticationError, Link, useMutation } from "blitz"
+ import { LabeledTextField } from "app/core/components/LabeledTextField"
+ import { Form, FORM_ERROR } from "app/core/components/Form"
+diff --git a/BlitzDiffApp/app/auth/components/SignupForm.tsx b/BlitzDiffApp/app/auth/components/SignupForm.tsx
+index 7362e35d0..97fb9ab7c 100644
+--- a/BlitzDiffApp/app/auth/components/SignupForm.tsx
++++ b/BlitzDiffApp/app/auth/components/SignupForm.tsx
+@@ -1,3 +1,4 @@
++import React from "react"
+ import { useMutation } from "blitz"
+ import { LabeledTextField } from "app/core/components/LabeledTextField"
+ import { Form, FORM_ERROR } from "app/core/components/Form"
+diff --git a/BlitzDiffApp/app/auth/pages/login.tsx b/BlitzDiffApp/app/auth/pages/login.tsx
+index 45e76ff56..9eae76b91 100644
+--- a/BlitzDiffApp/app/auth/pages/login.tsx
++++ b/BlitzDiffApp/app/auth/pages/login.tsx
+@@ -1,3 +1,4 @@
++import React from "react"
+ import { useRouter, BlitzPage } from "blitz"
+ import Layout from "app/core/layouts/Layout"
+ import { LoginForm } from "app/auth/components/LoginForm"
+diff --git a/BlitzDiffApp/app/auth/pages/signup.tsx b/BlitzDiffApp/app/auth/pages/signup.tsx
+index ea9de9cd1..f8eb87f8e 100644
+--- a/BlitzDiffApp/app/auth/pages/signup.tsx
++++ b/BlitzDiffApp/app/auth/pages/signup.tsx
+@@ -1,3 +1,4 @@
++import React from "react"
+ import { useRouter, BlitzPage } from "blitz"
+ import Layout from "app/core/layouts/Layout"
+ import { SignupForm } from "app/auth/components/SignupForm"
+diff --git a/BlitzDiffApp/app/core/components/Form.tsx b/BlitzDiffApp/app/core/components/Form.tsx
+index 2951abf33..7e74e88d1 100644
+--- a/BlitzDiffApp/app/core/components/Form.tsx
++++ b/BlitzDiffApp/app/core/components/Form.tsx
+@@ -1,4 +1,4 @@
+-import { ReactNode, PropsWithoutRef } from "react"
++import React, { ReactNode, PropsWithoutRef } from "react"
+ import { Form as FinalForm, FormProps as FinalFormProps } from "react-final-form"
+ import * as z from "zod"
+ export { FORM_ERROR } from "final-form"
+diff --git a/BlitzDiffApp/app/core/components/LabeledTextField.tsx b/BlitzDiffApp/app/core/components/LabeledTextField.tsx
+index 0d8517b8c..a1235ffec 100644
+--- a/BlitzDiffApp/app/core/components/LabeledTextField.tsx
++++ b/BlitzDiffApp/app/core/components/LabeledTextField.tsx
+@@ -1,5 +1,5 @@
+-import { forwardRef, PropsWithoutRef } from "react"
+-import { useField } from "react-final-form"
++import React, {PropsWithoutRef} from "react"
++import {useField} from "react-final-form"
+ 
+ export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElements["input"]> {
+   /** Field name. */
+@@ -11,13 +11,13 @@ export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElem
+   outerProps?: PropsWithoutRef<JSX.IntrinsicElements["div"]>
+ }
+ 
+-export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldProps>(
+-  ({ name, label, outerProps, ...props }, ref) => {
++export const LabeledTextField = React.forwardRef<HTMLInputElement, LabeledTextFieldProps>(
++  ({name, label, outerProps, ...props}, ref) => {
+     const {
+       input,
+-      meta: { touched, error, submitError, submitting },
++      meta: {touched, error, submitError, submitting},
+     } = useField(name, {
+-      parse: props.type === "number" ? Number : undefined,
++      parse: props.type === "number" ? Number : undefined
+     })
+ 
+     const normalizedError = Array.isArray(error) ? error.join(", ") : error || submitError
+@@ -30,7 +30,7 @@ export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldPro
+         </label>
+ 
+         {touched && normalizedError && (
+-          <div role="alert" style={{ color: "red" }}>
++          <div role="alert" style={{color: "red"}}>
+             {normalizedError}
+           </div>
+         )}
+@@ -53,7 +53,7 @@ export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldPro
+         `}</style>
+       </div>
+     )
+-  }
++  },
+ )
+ 
+ export default LabeledTextField
+diff --git a/BlitzDiffApp/app/pages/index.test.tsx b/BlitzDiffApp/app/pages/index.test.tsx
+index 9374c6024..66aba7111 100644
+--- a/BlitzDiffApp/app/pages/index.test.tsx
++++ b/BlitzDiffApp/app/pages/index.test.tsx
+@@ -1,3 +1,4 @@
++import React from "react"
+ import { render } from "test/utils"
+ 
+ import Home from "./index"
+diff --git a/BlitzDiffApp/db/migrations/20210306002559_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306002912_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306002559_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306002912_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index 65fadbf57..735653821 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -10,6 +10,9 @@
+     "test": "jest",
+     "test:watch": "jest --watch"
+   },
++  "browserslist": [
++    "defaults"
++  ],
+   "prisma": {
+     "schema": "db/schema.prisma"
+   },
+diff --git a/BlitzDiffApp/test/utils.tsx b/BlitzDiffApp/test/utils.tsx
+index 6fe4d681f..856e68186 100644
+--- a/BlitzDiffApp/test/utils.tsx
++++ b/BlitzDiffApp/test/utils.tsx
+@@ -1,3 +1,4 @@
++import React from "react"
+ import { RouterContext, BlitzRouter } from "blitz"
+ import { render as defaultRender } from "@testing-library/react"
+ import { renderHook as defaultRenderHook } from "@testing-library/react-hooks"
