@@ -1,0 +1,148 @@
+diff --git a/BlitzDiffApp/app/auth/mutations/login.ts b/BlitzDiffApp/app/auth/mutations/login.ts
+index 704d1f244..b155223a2 100644
+--- a/BlitzDiffApp/app/auth/mutations/login.ts
++++ b/BlitzDiffApp/app/auth/mutations/login.ts
+@@ -23,7 +23,7 @@ export default resolver.pipe(resolver.zod(Login), async ({ email, password }, ct
+   // This throws an error if credentials are invalid
+   const user = await authenticateUser(email, password)
+ 
+-  await ctx.session.$create({ userId: user.id, roles: [user.role as Role] })
++  await ctx.session.$create({ userId: user.id, role: user.role as Role })
+ 
+   return user
+ })
+diff --git a/BlitzDiffApp/app/auth/mutations/signup.ts b/BlitzDiffApp/app/auth/mutations/signup.ts
+index f6148bbc0..70d025ed6 100644
+--- a/BlitzDiffApp/app/auth/mutations/signup.ts
++++ b/BlitzDiffApp/app/auth/mutations/signup.ts
+@@ -10,6 +10,6 @@ export default resolver.pipe(resolver.zod(Signup), async ({ email, password }, c
+     select: { id: true, name: true, email: true, role: true },
+   })
+ 
+-  await ctx.session.$create({ userId: user.id, roles: [user.role as Role] })
++  await ctx.session.$create({ userId: user.id, role: user.role as Role })
+   return user
+ })
+diff --git a/BlitzDiffApp/app/auth/pages/forgot-password.tsx b/BlitzDiffApp/app/auth/pages/forgot-password.tsx
+index 13710772a..0d9a295ce 100644
+--- a/BlitzDiffApp/app/auth/pages/forgot-password.tsx
++++ b/BlitzDiffApp/app/auth/pages/forgot-password.tsx
+@@ -42,6 +42,7 @@ const ForgotPasswordPage: BlitzPage = () => {
+   )
+ }
+ 
++ForgotPasswordPage.redirectAuthenticatedTo = "/"
+ ForgotPasswordPage.getLayout = (page) => <Layout title="Forgot Your Password?">{page}</Layout>
+ 
+ export default ForgotPasswordPage
+diff --git a/BlitzDiffApp/app/auth/pages/login.tsx b/BlitzDiffApp/app/auth/pages/login.tsx
+index 6e18bd89a..9eae76b91 100644
+--- a/BlitzDiffApp/app/auth/pages/login.tsx
++++ b/BlitzDiffApp/app/auth/pages/login.tsx
+@@ -8,11 +8,17 @@ const LoginPage: BlitzPage = () => {
+ 
+   return (
+     <div>
+-      <LoginForm onSuccess={() => router.push("/")} />
++      <LoginForm
++        onSuccess={() => {
++          const next = (router.query.next as string) ?? "/"
++          router.push(next)
++        }}
++      />
+     </div>
+   )
+ }
+ 
++LoginPage.redirectAuthenticatedTo = "/"
+ LoginPage.getLayout = (page) => <Layout title="Log In">{page}</Layout>
+ 
+ export default LoginPage
+diff --git a/BlitzDiffApp/app/auth/pages/reset-password.tsx b/BlitzDiffApp/app/auth/pages/reset-password.tsx
+index f739b0f2d..405d53814 100644
+--- a/BlitzDiffApp/app/auth/pages/reset-password.tsx
++++ b/BlitzDiffApp/app/auth/pages/reset-password.tsx
+@@ -23,11 +23,11 @@ const ResetPasswordPage: BlitzPage = () => {
+       ) : (
+         <Form
+           submitText="Reset Password"
+-          schema={ResetPassword}
+-          initialValues={{ password: "", passwordConfirmation: "", token: query.token as string }}
++          schema={ResetPassword.omit({ token: true })}
++          initialValues={{ password: "", passwordConfirmation: "" }}
+           onSubmit={async (values) => {
+             try {
+-              await resetPasswordMutation(values)
++              await resetPasswordMutation({ ...values, token: query.token as string })
+             } catch (error) {
+               if (error.name === "ResetPasswordError") {
+                 return {
+@@ -53,6 +53,7 @@ const ResetPasswordPage: BlitzPage = () => {
+   )
+ }
+ 
++ResetPasswordPage.redirectAuthenticatedTo = "/"
+ ResetPasswordPage.getLayout = (page) => <Layout title="Reset Your Password">{page}</Layout>
+ 
+ export default ResetPasswordPage
+diff --git a/BlitzDiffApp/app/auth/pages/signup.tsx b/BlitzDiffApp/app/auth/pages/signup.tsx
+index 1ef9c2be2..f8eb87f8e 100644
+--- a/BlitzDiffApp/app/auth/pages/signup.tsx
++++ b/BlitzDiffApp/app/auth/pages/signup.tsx
+@@ -13,6 +13,7 @@ const SignupPage: BlitzPage = () => {
+   )
+ }
+ 
++SignupPage.redirectAuthenticatedTo = "/"
+ SignupPage.getLayout = (page) => <Layout title="Sign Up">{page}</Layout>
+ 
+ export default SignupPage
+diff --git a/BlitzDiffApp/app/pages/index.tsx b/BlitzDiffApp/app/pages/index.tsx
+index aba012d05..087d51d96 100644
+--- a/BlitzDiffApp/app/pages/index.tsx
++++ b/BlitzDiffApp/app/pages/index.tsx
+@@ -73,9 +73,7 @@ const Home: BlitzPage = () => {
+         <pre>
+           <code>blitz generate all project name:string</code>
+         </pre>
+-        <pre>
+-          <code>blitz prisma migrate dev --preview-feature</code>
+-        </pre>
++        <div style={{ marginBottom: "1rem" }}>(And select Yes to run prisma migrate)</div>
+         <div>
+           <p>
+             Then <strong>restart the server</strong>
+@@ -267,6 +265,7 @@ const Home: BlitzPage = () => {
+   )
+ }
+ 
++Home.suppressFirstRenderFlicker = true
+ Home.getLayout = (page) => <Layout title="Home">{page}</Layout>
+ 
+ export default Home
+diff --git a/BlitzDiffApp/db/migrations/20210306010756_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306005825_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306010756_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306005825_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/types.ts b/BlitzDiffApp/types.ts
+index 6c396af30..cd9e61011 100644
+--- a/BlitzDiffApp/types.ts
++++ b/BlitzDiffApp/types.ts
+@@ -3,7 +3,7 @@ import { SimpleRolesIsAuthorized } from "@blitzjs/server"
+ import { User } from "db"
+ 
+ // Note: You should switch to Postgres and then use a DB enum for role type
+-type Role = "ADMIN" | "USER"
++export type Role = "ADMIN" | "USER"
+ 
+ declare module "blitz" {
+   export interface Ctx extends DefaultCtx {
+@@ -13,7 +13,7 @@ declare module "blitz" {
+     isAuthorized: SimpleRolesIsAuthorized<Role>
+     PublicData: {
+       userId: User["id"]
+-      roles: Role[]
++      role: Role
+     }
+   }
+ }

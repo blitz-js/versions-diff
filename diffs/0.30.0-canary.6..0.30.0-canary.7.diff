@@ -1,0 +1,32 @@
+diff --git a/BlitzDiffApp/app/pages/index.tsx b/BlitzDiffApp/app/pages/index.tsx
+index aba012d05..599a00531 100644
+--- a/BlitzDiffApp/app/pages/index.tsx
++++ b/BlitzDiffApp/app/pages/index.tsx
+@@ -73,9 +73,7 @@ const Home: BlitzPage = () => {
+         <pre>
+           <code>blitz generate all project name:string</code>
+         </pre>
+-        <pre>
+-          <code>blitz prisma migrate dev --preview-feature</code>
+-        </pre>
++        <div style={{ marginBottom: "1rem" }}>(And select Yes to run prisma migrate)</div>
+         <div>
+           <p>
+             Then <strong>restart the server</strong>
+diff --git a/BlitzDiffApp/db/migrations/20210306010756_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306010537_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306010756_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306010537_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/types.ts b/BlitzDiffApp/types.ts
+index 6c396af30..51b2bf996 100644
+--- a/BlitzDiffApp/types.ts
++++ b/BlitzDiffApp/types.ts
+@@ -3,7 +3,7 @@ import { SimpleRolesIsAuthorized } from "@blitzjs/server"
+ import { User } from "db"
+ 
+ // Note: You should switch to Postgres and then use a DB enum for role type
+-type Role = "ADMIN" | "USER"
++export type Role = "ADMIN" | "USER"
+ 
+ declare module "blitz" {
+   export interface Ctx extends DefaultCtx {
