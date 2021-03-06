@@ -1,0 +1,135 @@
+diff --git a/BlitzDiffApp/app/auth/mutations/changePassword.ts b/BlitzDiffApp/app/auth/mutations/changePassword.ts
+index 5cc49a9d7..f559cc33f 100644
+--- a/BlitzDiffApp/app/auth/mutations/changePassword.ts
++++ b/BlitzDiffApp/app/auth/mutations/changePassword.ts
+@@ -1,11 +1,11 @@
+-import { NotFoundError, SecurePassword, resolver } from "blitz"
++import { NotFoundError, SecurePassword, pipe } from "blitz"
+ import db from "db"
+ import { authenticateUser } from "./login"
+ import { ChangePassword } from "../validations"
+ 
+-export default resolver.pipe(
+-  resolver.zod(ChangePassword),
+-  resolver.authorize(),
++export default pipe.resolver(
++  pipe.zod(ChangePassword),
++  pipe.authorize(),
+   async ({ currentPassword, newPassword }, ctx) => {
+     const user = await db.user.findFirst({ where: { id: ctx.session.userId! } })
+     if (!user) throw new NotFoundError()
+diff --git a/BlitzDiffApp/app/auth/mutations/forgotPassword.ts b/BlitzDiffApp/app/auth/mutations/forgotPassword.ts
+index 1cbf2a33c..c09bf462d 100644
+--- a/BlitzDiffApp/app/auth/mutations/forgotPassword.ts
++++ b/BlitzDiffApp/app/auth/mutations/forgotPassword.ts
+@@ -1,11 +1,11 @@
+-import { resolver, generateToken, hash256 } from "blitz"
++import { pipe, generateToken, hash256 } from "blitz"
+ import db from "db"
+ import { forgotPasswordMailer } from "mailers/forgotPasswordMailer"
+ import { ForgotPassword } from "../validations"
+ 
+ const RESET_PASSWORD_TOKEN_EXPIRATION_IN_HOURS = 4
+ 
+-export default resolver.pipe(resolver.zod(ForgotPassword), async ({ email }) => {
++export default pipe.resolver(pipe.zod(ForgotPassword), async ({ email }) => {
+   // 1. Get the user
+   const user = await db.user.findFirst({ where: { email: email.toLowerCase() } })
+ 
+diff --git a/BlitzDiffApp/app/auth/mutations/login.ts b/BlitzDiffApp/app/auth/mutations/login.ts
+index 9d62a7567..47465cf66 100644
+--- a/BlitzDiffApp/app/auth/mutations/login.ts
++++ b/BlitzDiffApp/app/auth/mutations/login.ts
+@@ -1,4 +1,4 @@
+-import { resolver, SecurePassword, AuthenticationError } from "blitz"
++import { pipe, SecurePassword, AuthenticationError } from "blitz"
+ import db from "db"
+ import { Login } from "../validations"
+ 
+@@ -18,7 +18,7 @@ export const authenticateUser = async (email: string, password: string) => {
+   return rest
+ }
+ 
+-export default resolver.pipe(resolver.zod(Login), async ({ email, password }, ctx) => {
++export default pipe.resolver(pipe.zod(Login), async ({ email, password }, ctx) => {
+   // This throws an error if credentials are invalid
+   const user = await authenticateUser(email, password)
+ 
+diff --git a/BlitzDiffApp/app/auth/mutations/resetPassword.ts b/BlitzDiffApp/app/auth/mutations/resetPassword.ts
+index ece656d4c..d500dc438 100644
+--- a/BlitzDiffApp/app/auth/mutations/resetPassword.ts
++++ b/BlitzDiffApp/app/auth/mutations/resetPassword.ts
+@@ -1,4 +1,4 @@
+-import { resolver, SecurePassword, hash256 } from "blitz"
++import { pipe, SecurePassword, hash256 } from "blitz"
+ import db from "db"
+ import { ResetPassword } from "../validations"
+ import login from "./login"
+@@ -8,7 +8,7 @@ export class ResetPasswordError extends Error {
+   message = "Reset password link is invalid or it has expired."
+ }
+ 
+-export default resolver.pipe(resolver.zod(ResetPassword), async ({ password, token }, ctx) => {
++export default pipe.resolver(pipe.zod(ResetPassword), async ({ password, token }, ctx) => {
+   // 1. Try to find this token in the database
+   const hashedToken = hash256(token)
+   const possibleToken = await db.token.findFirst({
+diff --git a/BlitzDiffApp/app/auth/mutations/signup.ts b/BlitzDiffApp/app/auth/mutations/signup.ts
+index 15109e632..619e280e5 100644
+--- a/BlitzDiffApp/app/auth/mutations/signup.ts
++++ b/BlitzDiffApp/app/auth/mutations/signup.ts
+@@ -1,8 +1,8 @@
+-import { resolver, SecurePassword } from "blitz"
++import { pipe, SecurePassword } from "blitz"
+ import db from "db"
+ import { Signup } from "app/auth/validations"
+ 
+-export default resolver.pipe(resolver.zod(Signup), async ({ email, password }, ctx) => {
++export default pipe.resolver(pipe.zod(Signup), async ({ email, password }, ctx) => {
+   const hashedPassword = await SecurePassword.hash(password)
+   const user = await db.user.create({
+     data: { email: email.toLowerCase(), hashedPassword, role: "user" },
+diff --git a/BlitzDiffApp/app/pages/_app.tsx b/BlitzDiffApp/app/pages/_app.tsx
+index 802e12ff4..465065a31 100644
+--- a/BlitzDiffApp/app/pages/_app.tsx
++++ b/BlitzDiffApp/app/pages/_app.tsx
+@@ -1,12 +1,5 @@
+-import {
+-  AppProps,
+-  ErrorComponent,
+-  useRouter,
+-  AuthenticationError,
+-  AuthorizationError,
+-  ErrorFallbackProps,
+-} from "blitz"
+-import { ErrorBoundary } from "react-error-boundary"
++import { AppProps, ErrorComponent, useRouter, AuthenticationError, AuthorizationError } from "blitz"
++import { ErrorBoundary, FallbackProps } from "react-error-boundary"
+ import { queryCache } from "react-query"
+ import LoginForm from "app/auth/components/LoginForm"
+ 
+@@ -29,7 +22,7 @@ export default function App({ Component, pageProps }: AppProps) {
+   )
+ }
+ 
+-function RootErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
++function RootErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+   if (error instanceof AuthenticationError) {
+     return <LoginForm onSuccess={resetErrorBoundary} />
+   } else if (error instanceof AuthorizationError) {
+@@ -41,7 +34,10 @@ function RootErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
+     )
+   } else {
+     return (
+-      <ErrorComponent statusCode={error.statusCode || 400} title={error.message || error.name} />
++      <ErrorComponent
++        statusCode={(error as any)?.statusCode || 400}
++        title={error?.message || error?.name}
++      />
+     )
+   }
+ }
+diff --git a/BlitzDiffApp/db/migrations/20210306011232_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306011705_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306011232_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306011705_initial_migration/migration.sql
