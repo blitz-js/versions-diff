@@ -1,0 +1,236 @@
+diff --git a/BlitzDiffApp/app/auth/mutations/login.ts b/BlitzDiffApp/app/auth/mutations/login.ts
+index b155223a2..9d62a7567 100644
+--- a/BlitzDiffApp/app/auth/mutations/login.ts
++++ b/BlitzDiffApp/app/auth/mutations/login.ts
+@@ -1,7 +1,6 @@
+ import { resolver, SecurePassword, AuthenticationError } from "blitz"
+ import db from "db"
+ import { Login } from "../validations"
+-import { Role } from "types"
+ 
+ export const authenticateUser = async (email: string, password: string) => {
+   const user = await db.user.findFirst({ where: { email } })
+@@ -23,7 +22,7 @@ export default resolver.pipe(resolver.zod(Login), async ({ email, password }, ct
+   // This throws an error if credentials are invalid
+   const user = await authenticateUser(email, password)
+ 
+-  await ctx.session.$create({ userId: user.id, role: user.role as Role })
++  await ctx.session.$create({ userId: user.id, roles: [user.role] })
+ 
+   return user
+ })
+diff --git a/BlitzDiffApp/app/auth/mutations/signup.ts b/BlitzDiffApp/app/auth/mutations/signup.ts
+index 70d025ed6..15109e632 100644
+--- a/BlitzDiffApp/app/auth/mutations/signup.ts
++++ b/BlitzDiffApp/app/auth/mutations/signup.ts
+@@ -1,15 +1,14 @@
+ import { resolver, SecurePassword } from "blitz"
+ import db from "db"
+ import { Signup } from "app/auth/validations"
+-import { Role } from "types"
+ 
+ export default resolver.pipe(resolver.zod(Signup), async ({ email, password }, ctx) => {
+   const hashedPassword = await SecurePassword.hash(password)
+   const user = await db.user.create({
+-    data: { email: email.toLowerCase(), hashedPassword, role: "USER" },
++    data: { email: email.toLowerCase(), hashedPassword, role: "user" },
+     select: { id: true, name: true, email: true, role: true },
+   })
+ 
+-  await ctx.session.$create({ userId: user.id, role: user.role as Role })
++  await ctx.session.$create({ userId: user.id, roles: [user.role] })
+   return user
+ })
+diff --git a/BlitzDiffApp/app/auth/pages/forgot-password.tsx b/BlitzDiffApp/app/auth/pages/forgot-password.tsx
+index 0d9a295ce..13710772a 100644
+--- a/BlitzDiffApp/app/auth/pages/forgot-password.tsx
++++ b/BlitzDiffApp/app/auth/pages/forgot-password.tsx
+@@ -42,7 +42,6 @@ const ForgotPasswordPage: BlitzPage = () => {
+   )
+ }
+ 
+-ForgotPasswordPage.redirectAuthenticatedTo = "/"
+ ForgotPasswordPage.getLayout = (page) => <Layout title="Forgot Your Password?">{page}</Layout>
+ 
+ export default ForgotPasswordPage
+diff --git a/BlitzDiffApp/app/auth/pages/login.tsx b/BlitzDiffApp/app/auth/pages/login.tsx
+index 9eae76b91..6e18bd89a 100644
+--- a/BlitzDiffApp/app/auth/pages/login.tsx
++++ b/BlitzDiffApp/app/auth/pages/login.tsx
+@@ -8,17 +8,11 @@ const LoginPage: BlitzPage = () => {
+ 
+   return (
+     <div>
+-      <LoginForm
+-        onSuccess={() => {
+-          const next = (router.query.next as string) ?? "/"
+-          router.push(next)
+-        }}
+-      />
++      <LoginForm onSuccess={() => router.push("/")} />
+     </div>
+   )
+ }
+ 
+-LoginPage.redirectAuthenticatedTo = "/"
+ LoginPage.getLayout = (page) => <Layout title="Log In">{page}</Layout>
+ 
+ export default LoginPage
+diff --git a/BlitzDiffApp/app/auth/pages/reset-password.tsx b/BlitzDiffApp/app/auth/pages/reset-password.tsx
+index 405d53814..f739b0f2d 100644
+--- a/BlitzDiffApp/app/auth/pages/reset-password.tsx
++++ b/BlitzDiffApp/app/auth/pages/reset-password.tsx
+@@ -23,11 +23,11 @@ const ResetPasswordPage: BlitzPage = () => {
+       ) : (
+         <Form
+           submitText="Reset Password"
+-          schema={ResetPassword.omit({ token: true })}
+-          initialValues={{ password: "", passwordConfirmation: "" }}
++          schema={ResetPassword}
++          initialValues={{ password: "", passwordConfirmation: "", token: query.token as string }}
+           onSubmit={async (values) => {
+             try {
+-              await resetPasswordMutation({ ...values, token: query.token as string })
++              await resetPasswordMutation(values)
+             } catch (error) {
+               if (error.name === "ResetPasswordError") {
+                 return {
+@@ -53,7 +53,6 @@ const ResetPasswordPage: BlitzPage = () => {
+   )
+ }
+ 
+-ResetPasswordPage.redirectAuthenticatedTo = "/"
+ ResetPasswordPage.getLayout = (page) => <Layout title="Reset Your Password">{page}</Layout>
+ 
+ export default ResetPasswordPage
+diff --git a/BlitzDiffApp/app/auth/pages/signup.tsx b/BlitzDiffApp/app/auth/pages/signup.tsx
+index f8eb87f8e..1ef9c2be2 100644
+--- a/BlitzDiffApp/app/auth/pages/signup.tsx
++++ b/BlitzDiffApp/app/auth/pages/signup.tsx
+@@ -13,7 +13,6 @@ const SignupPage: BlitzPage = () => {
+   )
+ }
+ 
+-SignupPage.redirectAuthenticatedTo = "/"
+ SignupPage.getLayout = (page) => <Layout title="Sign Up">{page}</Layout>
+ 
+ export default SignupPage
+diff --git a/BlitzDiffApp/app/pages/index.tsx b/BlitzDiffApp/app/pages/index.tsx
+index 087d51d96..aba012d05 100644
+--- a/BlitzDiffApp/app/pages/index.tsx
++++ b/BlitzDiffApp/app/pages/index.tsx
+@@ -73,7 +73,9 @@ const Home: BlitzPage = () => {
+         <pre>
+           <code>blitz generate all project name:string</code>
+         </pre>
+-        <div style={{ marginBottom: "1rem" }}>(And select Yes to run prisma migrate)</div>
++        <pre>
++          <code>blitz prisma migrate dev --preview-feature</code>
++        </pre>
+         <div>
+           <p>
+             Then <strong>restart the server</strong>
+@@ -265,7 +267,6 @@ const Home: BlitzPage = () => {
+   )
+ }
+ 
+-Home.suppressFirstRenderFlicker = true
+ Home.getLayout = (page) => <Layout title="Home">{page}</Layout>
+ 
+ export default Home
+diff --git a/BlitzDiffApp/db/migrations/20210306005604_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306011014_initial_migration/migration.sql
+similarity index 97%
+rename from BlitzDiffApp/db/migrations/20210306005604_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306011014_initial_migration/migration.sql
+index 0b34cc718..6df839c7a 100644
+--- a/BlitzDiffApp/db/migrations/20210306005604_initial_migration/migration.sql
++++ b/BlitzDiffApp/db/migrations/20210306011014_initial_migration/migration.sql
+@@ -6,7 +6,7 @@ CREATE TABLE "User" (
+     "name" TEXT,
+     "email" TEXT NOT NULL,
+     "hashedPassword" TEXT,
+-    "role" TEXT NOT NULL DEFAULT 'USER'
++    "role" TEXT NOT NULL DEFAULT 'user'
+ );
+ 
+ -- CreateTable
+diff --git a/BlitzDiffApp/db/schema.prisma b/BlitzDiffApp/db/schema.prisma
+index 1ad932610..dde411b62 100644
+--- a/BlitzDiffApp/db/schema.prisma
++++ b/BlitzDiffApp/db/schema.prisma
+@@ -13,20 +13,20 @@ generator client {
+ // --------------------------------------
+ 
+ model User {
+-  id             Int      @id @default(autoincrement())
+-  createdAt      DateTime @default(now())
+-  updatedAt      DateTime @updatedAt
++  id             Int       @default(autoincrement()) @id
++  createdAt      DateTime  @default(now())
++  updatedAt      DateTime  @updatedAt
+   name           String?
+-  email          String   @unique
++  email          String    @unique
+   hashedPassword String?
+-  role           String   @default("USER")
++  role           String    @default("user")
+ 
+-  tokens   Token[]
+-  sessions Session[]
++  tokens         Token[]
++  sessions       Session[]
+ }
+ 
+ model Session {
+-  id                 Int       @id @default(autoincrement())
++  id                 Int       @default(autoincrement()) @id
+   createdAt          DateTime  @default(now())
+   updatedAt          DateTime  @updatedAt
+   expiresAt          DateTime?
+@@ -36,14 +36,14 @@ model Session {
+   publicData         String?
+   privateData        String?
+ 
+-  user   User? @relation(fields: [userId], references: [id])
+-  userId Int?
++  user               User?     @relation(fields: [userId], references: [id])
++  userId             Int?
+ }
+ 
+ model Token {
+-  id          Int      @id @default(autoincrement())
+-  createdAt   DateTime @default(now())
+-  updatedAt   DateTime @updatedAt
++  id          Int       @default(autoincrement()) @id
++  createdAt   DateTime  @default(now())
++  updatedAt   DateTime  @updatedAt
+   hashedToken String
+   type        String
+   // See note below about TokenType enum
+diff --git a/BlitzDiffApp/types.ts b/BlitzDiffApp/types.ts
+index cd9e61011..64bc8a6dc 100644
+--- a/BlitzDiffApp/types.ts
++++ b/BlitzDiffApp/types.ts
+@@ -1,19 +1,16 @@
+ import { DefaultCtx, SessionContext } from "blitz"
+-import { SimpleRolesIsAuthorized } from "@blitzjs/server"
++import { simpleRolesIsAuthorized } from "@blitzjs/server"
+ import { User } from "db"
+ 
+-// Note: You should switch to Postgres and then use a DB enum for role type
+-export type Role = "ADMIN" | "USER"
+-
+ declare module "blitz" {
+   export interface Ctx extends DefaultCtx {
+     session: SessionContext
+   }
+   export interface Session {
+-    isAuthorized: SimpleRolesIsAuthorized<Role>
++    isAuthorized: typeof simpleRolesIsAuthorized
+     PublicData: {
+       userId: User["id"]
+-      role: Role
++      roles: string[]
+     }
+   }
+ }
