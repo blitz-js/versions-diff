@@ -3,7 +3,6 @@ set -euxo pipefail
 
 
 releases=(
-0.31.1
 0.31.0
 0.30.7
 0.30.6

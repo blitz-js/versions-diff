@@ -47,8 +47,8 @@ function generateNewReleaseBranch() {
     git checkout -b "$branchName"
 
     # generate app
-    # expect expect_new_release.sh $newRelease $AppName
-    npx blitz@"$newRelease" new "$AppName" --no-git
+    expect expect_new_release.sh $newRelease $AppName
+    # npx blitz@"$newRelease" new "$AppName" --no-git
 
     # commit and push branch
     git add "$AppName"
