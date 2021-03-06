@@ -1,0 +1,757 @@
+diff --git a/BlitzDiffApp/app/auth/auth-utils.ts b/BlitzDiffApp/app/auth/auth-utils.ts
+index f5a851738..c0e8a2d82 100644
+--- a/BlitzDiffApp/app/auth/auth-utils.ts
++++ b/BlitzDiffApp/app/auth/auth-utils.ts
+@@ -1,37 +1,16 @@
+-import { AuthenticationError } from "blitz"
+-import SecurePassword from "secure-password"
++import { SecurePassword, AuthenticationError } from "blitz"
+ import db from "db"
+ 
+-const SP = () => new SecurePassword()
+-
+-export const hashPassword = async (password: string) => {
+-  const hashedBuffer = await SP().hash(Buffer.from(password))
+-  return hashedBuffer.toString("base64")
+-}
+-export const verifyPassword = async (hashedPassword: string, password: string) => {
+-  try {
+-    return await SP().verify(Buffer.from(password), Buffer.from(hashedPassword, "base64"))
+-  } catch (error) {
+-    console.error(error)
+-    return false
+-  }
+-}
+-
+ export const authenticateUser = async (email: string, password: string) => {
+-  const user = await db.user.findFirst({ where: { email: email.toLowerCase() } })
++  const user = await db.user.findFirst({ where: { email } })
++  if (!user) throw new AuthenticationError()
+ 
+-  if (!user || !user.hashedPassword) throw new AuthenticationError()
++  const result = await SecurePassword.verify(user.hashedPassword, password)
+ 
+-  switch (await verifyPassword(user.hashedPassword, password)) {
+-    case SecurePassword.VALID:
+-      break
+-    case SecurePassword.VALID_NEEDS_REHASH:
+-      // Upgrade hashed password with a more secure hash
+-      const improvedHash = await hashPassword(password)
+-      await db.user.update({ where: { id: user.id }, data: { hashedPassword: improvedHash } })
+-      break
+-    default:
+-      throw new AuthenticationError()
++  if (result === SecurePassword.VALID_NEEDS_REHASH) {
++    // Upgrade hashed password with a more secure hash
++    const improvedHash = await SecurePassword.hash(password)
++    await db.user.update({ where: { id: user.id }, data: { hashedPassword: improvedHash } })
+   }
+ 
+   const { hashedPassword, ...rest } = user
+diff --git a/BlitzDiffApp/app/auth/mutations/signup.ts b/BlitzDiffApp/app/auth/mutations/signup.ts
+index 65895fe0a..d4b152db4 100644
+--- a/BlitzDiffApp/app/auth/mutations/signup.ts
++++ b/BlitzDiffApp/app/auth/mutations/signup.ts
+@@ -1,13 +1,12 @@
+-import { Ctx } from "blitz"
++import { Ctx, SecurePassword } from "blitz"
+ import db from "db"
+-import { hashPassword } from "app/auth/auth-utils"
+ import { SignupInput, SignupInputType } from "app/auth/validations"
+ 
+ export default async function signup(input: SignupInputType, { session }: Ctx) {
+   // This throws an error if input is invalid
+   const { email, password } = SignupInput.parse(input)
+ 
+-  const hashedPassword = await hashPassword(password)
++  const hashedPassword = await SecurePassword.hash(password)
+   const user = await db.user.create({
+     data: { email: email.toLowerCase(), hashedPassword, role: "user" },
+     select: { id: true, name: true, email: true, role: true },
+diff --git a/BlitzDiffApp/app/components/LabeledTextField.tsx b/BlitzDiffApp/app/components/LabeledTextField.tsx
+index 84fd2b08f..a1235ffec 100644
+--- a/BlitzDiffApp/app/components/LabeledTextField.tsx
++++ b/BlitzDiffApp/app/components/LabeledTextField.tsx
+@@ -16,7 +16,9 @@ export const LabeledTextField = React.forwardRef<HTMLInputElement, LabeledTextFi
+     const {
+       input,
+       meta: {touched, error, submitError, submitting},
+-    } = useField(name)
++    } = useField(name, {
++      parse: props.type === "number" ? Number : undefined
++    })
+ 
+     const normalizedError = Array.isArray(error) ? error.join(", ") : error || submitError
+ 
+diff --git a/BlitzDiffApp/app/pages/index.tsx b/BlitzDiffApp/app/pages/index.tsx
+index a31fee46f..83d6d90dc 100644
+--- a/BlitzDiffApp/app/pages/index.tsx
++++ b/BlitzDiffApp/app/pages/index.tsx
+@@ -74,7 +74,7 @@ const Home: BlitzPage = () => {
+           <code>blitz generate all project name:string</code>
+         </pre>
+         <pre>
+-          <code>blitz db migrate</code>
++          <code>blitz prisma migrate dev --preview-feature</code>
+         </pre>
+         <div>
+           <p>
+diff --git a/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql
+new file mode 100644
+index 000000000..f3028fb44
+--- /dev/null
++++ b/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql
+@@ -0,0 +1,31 @@
++-- CreateTable
++CREATE TABLE "User" (
++    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
++    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" DATETIME NOT NULL,
++    "name" TEXT,
++    "email" TEXT NOT NULL,
++    "hashedPassword" TEXT,
++    "role" TEXT NOT NULL DEFAULT 'user'
++);
++
++-- CreateTable
++CREATE TABLE "Session" (
++    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
++    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" DATETIME NOT NULL,
++    "expiresAt" DATETIME,
++    "handle" TEXT NOT NULL,
++    "userId" INTEGER,
++    "hashedSessionToken" TEXT,
++    "antiCSRFToken" TEXT,
++    "publicData" TEXT,
++    "privateData" TEXT,
++    FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
++);
++
++-- CreateIndex
++CREATE UNIQUE INDEX "User.email_unique" ON "User"("email");
++
++-- CreateIndex
++CREATE UNIQUE INDEX "Session.handle_unique" ON "Session"("handle");
+diff --git a/BlitzDiffApp/db/migrations/20210306154307-initial-migration/README.md b/BlitzDiffApp/db/migrations/20210306154307-initial-migration/README.md
+deleted file mode 100644
+index e0d74415c..000000000
+--- a/BlitzDiffApp/db/migrations/20210306154307-initial-migration/README.md
++++ /dev/null
+@@ -1,87 +0,0 @@
+-# Migration `20210306154307-initial-migration`
+-
+-This migration has been generated by Matthieu PETIT at 3/6/2021, 4:43:07 PM.
+-You can check out the [state of the schema](./schema.prisma) after the migration.
+-
+-## Database Steps
+-
+-```sql
+-CREATE TABLE "User" (
+-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-    "updatedAt" DATETIME NOT NULL,
+-    "name" TEXT,
+-    "email" TEXT NOT NULL,
+-    "hashedPassword" TEXT,
+-    "role" TEXT NOT NULL DEFAULT 'user'
+-)
+-
+-CREATE TABLE "Session" (
+-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-    "updatedAt" DATETIME NOT NULL,
+-    "expiresAt" DATETIME,
+-    "handle" TEXT NOT NULL,
+-    "userId" INTEGER,
+-    "hashedSessionToken" TEXT,
+-    "antiCSRFToken" TEXT,
+-    "publicData" TEXT,
+-    "privateData" TEXT,
+-
+-    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
+-)
+-
+-CREATE UNIQUE INDEX "User.email_unique" ON "User"("email")
+-
+-CREATE UNIQUE INDEX "Session.handle_unique" ON "Session"("handle")
+-```
+-
+-## Changes
+-
+-```diff
+-diff --git schema.prisma schema.prisma
+-migration ..20210306154307-initial-migration
+---- datamodel.dml
+-+++ datamodel.dml
+-@@ -1,0 +1,38 @@
+-+// This is your Prisma schema file,
+-+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+-+
+-+datasource db {
+-+  provider = "sqlite"
+-+  url = "***"
+-+}
+-+
+-+generator client {
+-+  provider = "prisma-client-js"
+-+}
+-+
+-+// --------------------------------------
+-+
+-+model User {
+-+  id             Int       @default(autoincrement()) @id
+-+  createdAt      DateTime  @default(now())
+-+  updatedAt      DateTime  @updatedAt
+-+  name           String?
+-+  email          String    @unique
+-+  hashedPassword String?
+-+  role           String    @default("user")
+-+  sessions       Session[]
+-+}
+-+
+-+model Session {
+-+  id                 Int       @default(autoincrement()) @id
+-+  createdAt          DateTime  @default(now())
+-+  updatedAt          DateTime  @updatedAt
+-+  expiresAt          DateTime?
+-+  handle             String    @unique
+-+  user               User?     @relation(fields: [userId], references: [id])
+-+  userId             Int?
+-+  hashedSessionToken String?
+-+  antiCSRFToken      String?
+-+  publicData         String?
+-+  privateData        String?
+-+}
+-```
+-
+-
+diff --git a/BlitzDiffApp/db/migrations/20210306154307-initial-migration/schema.prisma b/BlitzDiffApp/db/migrations/20210306154307-initial-migration/schema.prisma
+deleted file mode 100644
+index c0ce11a35..000000000
+--- a/BlitzDiffApp/db/migrations/20210306154307-initial-migration/schema.prisma
++++ /dev/null
+@@ -1,38 +0,0 @@
+-// This is your Prisma schema file,
+-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+-
+-datasource db {
+-  provider = "sqlite"
+-  url = "***"
+-}
+-
+-generator client {
+-  provider = "prisma-client-js"
+-}
+-
+-// --------------------------------------
+-
+-model User {
+-  id             Int       @default(autoincrement()) @id
+-  createdAt      DateTime  @default(now())
+-  updatedAt      DateTime  @updatedAt
+-  name           String?
+-  email          String    @unique
+-  hashedPassword String?
+-  role           String    @default("user")
+-  sessions       Session[]
+-}
+-
+-model Session {
+-  id                 Int       @default(autoincrement()) @id
+-  createdAt          DateTime  @default(now())
+-  updatedAt          DateTime  @updatedAt
+-  expiresAt          DateTime?
+-  handle             String    @unique
+-  user               User?     @relation(fields: [userId], references: [id])
+-  userId             Int?
+-  hashedSessionToken String?
+-  antiCSRFToken      String?
+-  publicData         String?
+-  privateData        String?
+-}
+diff --git a/BlitzDiffApp/db/migrations/20210306154307-initial-migration/steps.json b/BlitzDiffApp/db/migrations/20210306154307-initial-migration/steps.json
+deleted file mode 100644
+index 0e8c23090..000000000
+--- a/BlitzDiffApp/db/migrations/20210306154307-initial-migration/steps.json
++++ /dev/null
+@@ -1,398 +0,0 @@
+-{
+-  "version": "0.3.14-fixed",
+-  "steps": [
+-    {
+-      "tag": "CreateSource",
+-      "source": "db"
+-    },
+-    {
+-      "tag": "CreateArgument",
+-      "location": {
+-        "tag": "Source",
+-        "source": "db"
+-      },
+-      "argument": "provider",
+-      "value": "\"sqlite\""
+-    },
+-    {
+-      "tag": "CreateArgument",
+-      "location": {
+-        "tag": "Source",
+-        "source": "db"
+-      },
+-      "argument": "url",
+-      "value": "\"***\""
+-    },
+-    {
+-      "tag": "CreateModel",
+-      "model": "User"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "User",
+-      "field": "id",
+-      "type": "Int",
+-      "arity": "Required"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "User",
+-          "field": "id"
+-        },
+-        "directive": "default"
+-      }
+-    },
+-    {
+-      "tag": "CreateArgument",
+-      "location": {
+-        "tag": "Directive",
+-        "path": {
+-          "tag": "Field",
+-          "model": "User",
+-          "field": "id"
+-        },
+-        "directive": "default"
+-      },
+-      "argument": "",
+-      "value": "autoincrement()"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "User",
+-          "field": "id"
+-        },
+-        "directive": "id"
+-      }
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "User",
+-      "field": "createdAt",
+-      "type": "DateTime",
+-      "arity": "Required"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "User",
+-          "field": "createdAt"
+-        },
+-        "directive": "default"
+-      }
+-    },
+-    {
+-      "tag": "CreateArgument",
+-      "location": {
+-        "tag": "Directive",
+-        "path": {
+-          "tag": "Field",
+-          "model": "User",
+-          "field": "createdAt"
+-        },
+-        "directive": "default"
+-      },
+-      "argument": "",
+-      "value": "now()"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "User",
+-      "field": "updatedAt",
+-      "type": "DateTime",
+-      "arity": "Required"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "User",
+-          "field": "updatedAt"
+-        },
+-        "directive": "updatedAt"
+-      }
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "User",
+-      "field": "name",
+-      "type": "String",
+-      "arity": "Optional"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "User",
+-      "field": "email",
+-      "type": "String",
+-      "arity": "Required"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "User",
+-          "field": "email"
+-        },
+-        "directive": "unique"
+-      }
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "User",
+-      "field": "hashedPassword",
+-      "type": "String",
+-      "arity": "Optional"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "User",
+-      "field": "role",
+-      "type": "String",
+-      "arity": "Required"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "User",
+-          "field": "role"
+-        },
+-        "directive": "default"
+-      }
+-    },
+-    {
+-      "tag": "CreateArgument",
+-      "location": {
+-        "tag": "Directive",
+-        "path": {
+-          "tag": "Field",
+-          "model": "User",
+-          "field": "role"
+-        },
+-        "directive": "default"
+-      },
+-      "argument": "",
+-      "value": "\"user\""
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "User",
+-      "field": "sessions",
+-      "type": "Session",
+-      "arity": "List"
+-    },
+-    {
+-      "tag": "CreateModel",
+-      "model": "Session"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "id",
+-      "type": "Int",
+-      "arity": "Required"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "id"
+-        },
+-        "directive": "default"
+-      }
+-    },
+-    {
+-      "tag": "CreateArgument",
+-      "location": {
+-        "tag": "Directive",
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "id"
+-        },
+-        "directive": "default"
+-      },
+-      "argument": "",
+-      "value": "autoincrement()"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "id"
+-        },
+-        "directive": "id"
+-      }
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "createdAt",
+-      "type": "DateTime",
+-      "arity": "Required"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "createdAt"
+-        },
+-        "directive": "default"
+-      }
+-    },
+-    {
+-      "tag": "CreateArgument",
+-      "location": {
+-        "tag": "Directive",
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "createdAt"
+-        },
+-        "directive": "default"
+-      },
+-      "argument": "",
+-      "value": "now()"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "updatedAt",
+-      "type": "DateTime",
+-      "arity": "Required"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "updatedAt"
+-        },
+-        "directive": "updatedAt"
+-      }
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "expiresAt",
+-      "type": "DateTime",
+-      "arity": "Optional"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "handle",
+-      "type": "String",
+-      "arity": "Required"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "handle"
+-        },
+-        "directive": "unique"
+-      }
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "user",
+-      "type": "User",
+-      "arity": "Optional"
+-    },
+-    {
+-      "tag": "CreateDirective",
+-      "location": {
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "user"
+-        },
+-        "directive": "relation"
+-      }
+-    },
+-    {
+-      "tag": "CreateArgument",
+-      "location": {
+-        "tag": "Directive",
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "user"
+-        },
+-        "directive": "relation"
+-      },
+-      "argument": "fields",
+-      "value": "[userId]"
+-    },
+-    {
+-      "tag": "CreateArgument",
+-      "location": {
+-        "tag": "Directive",
+-        "path": {
+-          "tag": "Field",
+-          "model": "Session",
+-          "field": "user"
+-        },
+-        "directive": "relation"
+-      },
+-      "argument": "references",
+-      "value": "[id]"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "userId",
+-      "type": "Int",
+-      "arity": "Optional"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "hashedSessionToken",
+-      "type": "String",
+-      "arity": "Optional"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "antiCSRFToken",
+-      "type": "String",
+-      "arity": "Optional"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "publicData",
+-      "type": "String",
+-      "arity": "Optional"
+-    },
+-    {
+-      "tag": "CreateField",
+-      "model": "Session",
+-      "field": "privateData",
+-      "type": "String",
+-      "arity": "Optional"
+-    }
+-  ]
+-}
+\ No newline at end of file
+diff --git a/BlitzDiffApp/db/migrations/migrate.lock b/BlitzDiffApp/db/migrations/migrate.lock
+deleted file mode 100644
+index 623604caa..000000000
+--- a/BlitzDiffApp/db/migrations/migrate.lock
++++ /dev/null
+@@ -1,3 +0,0 @@
+-# Prisma Migrate lockfile v1
+-
+-20210306154307-initial-migration
+\ No newline at end of file
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index 3caa9a949..cdcb71e60 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -3,7 +3,7 @@
+   "version": "1.0.0",
+   "scripts": {
+     "start": "blitz start",
+-    "studio": "blitz db studio",
++    "studio": "blitz prisma studio",
+     "build": "blitz build",
+     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx .",
+     "test": "jest",
+@@ -31,13 +31,12 @@
+     ]
+   },
+   "dependencies": {
+-    "@prisma/cli": "~2.12",
+-    "@prisma/client": "~2.12",
+-    "blitz": "0.30.0-canary.15",
+-    "react": "0.0.0-experimental-4ead6b530",
+-    "react-dom": "0.0.0-experimental-4ead6b530",
+-    "react-error-boundary": "2.3.2",
+-    "secure-password": "4.0.0",
++    "@prisma/cli": "~2.14",
++    "@prisma/client": "~2.14",
++    "blitz": "0.31.1",
++    "react": "0.0.0-experimental-3310209d0",
++    "react-dom": "0.0.0-experimental-3310209d0",
++    "react-error-boundary": "3.1.1",
+     "typescript": "4.2.3",
+     "zod": "1.11.11",
+     "final-form": "4.20.2",
+@@ -48,13 +47,12 @@
+     "@testing-library/react": "11.2.5",
+     "@testing-library/react-hooks": "3.7.0",
+     "@types/jest": "26.0.20",
+-    "@types/react": "16.14.4",
+-    "@types/secure-password": "3.1.0",
++    "@types/react": "17.0.2",
+     "@typescript-eslint/eslint-plugin": "4.16.1",
+     "@typescript-eslint/parser": "4.16.1",
+     "babel-eslint": "10.1.0",
+     "eslint": "7.21.0",
+-    "eslint-config-react-app": "5.2.1",
++    "eslint-config-react-app": "6.0.0",
+     "eslint-plugin-flowtype": "5.3.1",
+     "eslint-plugin-import": "2.22.1",
+     "eslint-plugin-jsx-a11y": "6.4.1",
+@@ -64,7 +62,7 @@
+     "jest": "26.6.3",
+     "jest-environment-jsdom-fourteen": "1.0.1",
+     "jest-watch-typeahead": "0.6.1",
+-    "react-test-renderer": "16.14.0",
++    "react-test-renderer": "17.0.1",
+     "lint-staged": "10.5.4",
+     "prettier": "2.2.1",
+     "pretty-quick": "3.1.0",
+diff --git a/BlitzDiffApp/test/utils.tsx b/BlitzDiffApp/test/utils.tsx
+index efdb66861..856e68186 100644
+--- a/BlitzDiffApp/test/utils.tsx
++++ b/BlitzDiffApp/test/utils.tsx
+@@ -70,6 +70,7 @@ export const mockRouter: BlitzRouter = {
+   asPath: "/",
+   params: {},
+   query: {},
++  isReady: true,
+   push: jest.fn(),
+   replace: jest.fn(),
+   reload: jest.fn(),
