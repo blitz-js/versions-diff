@@ -1,0 +1,42 @@
+diff --git a/BlitzDiffApp/app/pages/index.tsx b/BlitzDiffApp/app/pages/index.tsx
+index a31fee46f..83d6d90dc 100644
+--- a/BlitzDiffApp/app/pages/index.tsx
++++ b/BlitzDiffApp/app/pages/index.tsx
+@@ -74,7 +74,7 @@ const Home: BlitzPage = () => {
+           <code>blitz generate all project name:string</code>
+         </pre>
+         <pre>
+-          <code>blitz db migrate</code>
++          <code>blitz prisma migrate dev --preview-feature</code>
+         </pre>
+         <div>
+           <p>
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index aa5c2c375..387b0616e 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -31,9 +31,9 @@
+     ]
+   },
+   "dependencies": {
+-    "@prisma/cli": "~2.12",
+-    "@prisma/client": "~2.12",
+-    "blitz": "0.30.0-canary.15",
++    "@prisma/cli": "~2.14",
++    "@prisma/client": "~2.14",
++    "blitz": "0.31.1",
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+     "react-error-boundary": "3.1.1",
+diff --git a/BlitzDiffApp/test/utils.tsx b/BlitzDiffApp/test/utils.tsx
+index efdb66861..856e68186 100644
+--- a/BlitzDiffApp/test/utils.tsx
++++ b/BlitzDiffApp/test/utils.tsx
+@@ -70,6 +70,7 @@ export const mockRouter: BlitzRouter = {
+   asPath: "/",
+   params: {},
+   query: {},
++  isReady: true,
+   push: jest.fn(),
+   replace: jest.fn(),
+   reload: jest.fn(),

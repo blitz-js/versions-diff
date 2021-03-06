@@ -1,0 +1,88 @@
+diff --git a/BlitzDiffApp/app/pages/index.tsx b/BlitzDiffApp/app/pages/index.tsx
+index 83d6d90dc..a31fee46f 100644
+--- a/BlitzDiffApp/app/pages/index.tsx
++++ b/BlitzDiffApp/app/pages/index.tsx
+@@ -74,7 +74,7 @@ const Home: BlitzPage = () => {
+           <code>blitz generate all project name:string</code>
+         </pre>
+         <pre>
+-          <code>blitz prisma migrate dev --preview-feature</code>
++          <code>blitz db migrate</code>
+         </pre>
+         <div>
+           <p>
+diff --git a/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql
+deleted file mode 100644
+index f3028fb44..000000000
+--- a/BlitzDiffApp/db/migrations/20210306012332_initial_migration/migration.sql
++++ /dev/null
+@@ -1,31 +0,0 @@
+--- CreateTable
+-CREATE TABLE "User" (
+-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-    "updatedAt" DATETIME NOT NULL,
+-    "name" TEXT,
+-    "email" TEXT NOT NULL,
+-    "hashedPassword" TEXT,
+-    "role" TEXT NOT NULL DEFAULT 'user'
+-);
+-
+--- CreateTable
+-CREATE TABLE "Session" (
+-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-    "updatedAt" DATETIME NOT NULL,
+-    "expiresAt" DATETIME,
+-    "handle" TEXT NOT NULL,
+-    "userId" INTEGER,
+-    "hashedSessionToken" TEXT,
+-    "antiCSRFToken" TEXT,
+-    "publicData" TEXT,
+-    "privateData" TEXT,
+-    FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+-);
+-
+--- CreateIndex
+-CREATE UNIQUE INDEX "User.email_unique" ON "User"("email");
+-
+--- CreateIndex
+-CREATE UNIQUE INDEX "Session.handle_unique" ON "Session"("handle");
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index cdcb71e60..aa5c2c375 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -3,7 +3,7 @@
+   "version": "1.0.0",
+   "scripts": {
+     "start": "blitz start",
+-    "studio": "blitz prisma studio",
++    "studio": "blitz db studio",
+     "build": "blitz build",
+     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx .",
+     "test": "jest",
+@@ -31,9 +31,9 @@
+     ]
+   },
+   "dependencies": {
+-    "@prisma/cli": "~2.14",
+-    "@prisma/client": "~2.14",
+-    "blitz": "0.31.1",
++    "@prisma/cli": "~2.12",
++    "@prisma/client": "~2.12",
++    "blitz": "0.30.0-canary.15",
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+     "react-error-boundary": "3.1.1",
+diff --git a/BlitzDiffApp/test/utils.tsx b/BlitzDiffApp/test/utils.tsx
+index 856e68186..efdb66861 100644
+--- a/BlitzDiffApp/test/utils.tsx
++++ b/BlitzDiffApp/test/utils.tsx
+@@ -70,7 +70,6 @@ export const mockRouter: BlitzRouter = {
+   asPath: "/",
+   params: {},
+   query: {},
+-  isReady: true,
+   push: jest.fn(),
+   replace: jest.fn(),
+   reload: jest.fn(),
