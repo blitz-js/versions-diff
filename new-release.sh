@@ -53,7 +53,7 @@ function generateNewReleaseBranch() {
     # commit and push branch
     git add "$AppName"
     git commit -m "Release $newRelease" --no-verify
-    git push origin --delete "$branchName" || git push origin "$branchName" --no-verify
+    git push origin --delete "$branchName" --no-verify || git push origin "$branchName" --no-verify
     git push --set-upstream origin "$branchName" --no-verify
 
     # go back to master

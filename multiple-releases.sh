@@ -3,6 +3,9 @@ set -euxo pipefail
 
 
 releases=(
+0.30.5      
+0.30.4      
+0.30.3      
 0.30.2      
 0.30.1      
 0.30.0      
@@ -15,5 +18,5 @@ releases=(
 for v in "${releases[@]}"
 do
     echo $v
-    ./expect-new-release.sh $v
+    ./new-release.sh $v
 done

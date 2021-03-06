@@ -17,9 +17,9 @@ https://react-native-community.github.io/upgrade-helper/
 
 ## Diff table (full table [HERE](https://react-native-community.github.io/versions-diff-purge/))
 
-| From->To | B   | L   | I   | T   | Z   |     |     |     | T   | E   | A   | M   |
+| From->To | I   |     | L   | O   | V   | E   |     | D   | I   | F   | F   | S   |
 | -------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.30.4   | X   |     |     |     |     |     |     |     |     |     |     |     |
+| 0.30.5   | X   |     |     |     |     |     |     |     |     |     |     |     |
 
 ## To see the full table containing all releases click [HERE](https://react-native-community.github.io/versions-diff-purge/)
 
