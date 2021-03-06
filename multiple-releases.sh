@@ -17,7 +17,6 @@ releases=(
 0.30.0-canary.3
 0.30.0-canary.2
 0.30.0-canary.1
-0.30.0-canary.0
 0.29.7
 0.29.6
 0.29.5
