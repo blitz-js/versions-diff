@@ -1,0 +1,97 @@
+diff --git a/BlitzDiffApp/README.md b/BlitzDiffApp/README.md
+index e269be399..6d780988c 100644
+--- a/BlitzDiffApp/README.md
++++ b/BlitzDiffApp/README.md
+@@ -66,26 +66,6 @@ Here is the starting structure of your app.
+ ```
+ BlitzDiffApp
+ ├── app/
+-│   ├── api/
+-│   ├── auth/
+-│   │   ├── components/
+-│   │   │   ├── LoginForm.tsx
+-│   │   │   └── SignupForm.tsx
+-│   │   ├── mutations/
+-│   │   │   ├── changePassword.ts
+-│   │   │   ├── forgotPassword.test.ts
+-│   │   │   ├── forgotPassword.ts
+-│   │   │   ├── login.ts
+-│   │   │   ├── logout.ts
+-│   │   │   ├── resetPassword.test.ts
+-│   │   │   ├── resetPassword.ts
+-│   │   │   └── signup.ts
+-│   │   ├── pages/
+-│   │   │   ├── forgot-password.tsx
+-│   │   │   ├── login.tsx
+-│   │   │   ├── reset-password.tsx
+-│   │   │   └── signup.tsx
+-│   │   └── validations.ts
+ │   ├── core/
+ │   │   ├── components/
+ │   │   │   ├── Form.tsx
+@@ -100,6 +80,20 @@ BlitzDiffApp
+ │   │   ├── _document.tsx
+ │   │   ├── index.test.tsx
+ │   │   └── index.tsx
++│   ├── api/
++│   ├── auth/
++│   │   ├── components/
++│   │   │   ├── LoginForm.tsx
++│   │   │   └── SignupForm.tsx
++│   │   ├── mutations/
++│   │   │   ├── changePassword.ts
++│   │   │   ├── login.ts
++│   │   │   ├── logout.ts
++│   │   │   └── signup.ts
++│   │   ├── pages/
++│   │   │   ├── login.tsx
++│   │   │   └── signup.tsx
++│   │   └── validations.ts
+ │   └── users/
+ │       └── queries/
+ │           └── getCurrentUser.ts
+@@ -108,8 +102,6 @@ BlitzDiffApp
+ │   ├── schema.prisma
+ │   └── seeds.ts
+ ├── integrations/
+-├── mailers/
+-│   └── forgotPasswordMailer.ts
+ ├── public/
+ │   ├── favicon.ico*
+ │   └── logo.png
+@@ -122,7 +114,6 @@ BlitzDiffApp
+ ├── jest.config.js
+ ├── package.json
+ ├── tsconfig.json
+-├── types.d.ts
+ ├── types.ts
+ └── yarn.lock
+ ```
+diff --git a/BlitzDiffApp/db/db.sqlite-journal b/BlitzDiffApp/db/db.sqlite-journal
+index 0ec3a1d61ebe1670f602873c40e4611c07134d5f..c7c9bb81d05877ee1f2f8fc2f62f2bdd6840ade5 100644
+GIT binary patch
+delta 90
+zcmbQ>GQnj-t)Q||TB508T8gf@sgb3wiBU?Du4SsBiLP;?xnYWhp=p|tVbbIUf*uM+
+u2Brq_nR%HdnTa{^xtZxji6xo&d5je-FPiVJmRLS%Glvk10E^%+gM0w+OC3u9
+
+delta 90
+zcmbQ>GQnj-t)Q~GnQ^kINt&*?v1OXBNotb0uBC;crLM6_no*)@qPbyeQtIRdf*uNn
+u7DlG=nR%HdnTa{^xtZxji6xo&d5je-&wQ=sM(_E#nL~(0fTiM!8$ST+ejPgi
+
+diff --git a/BlitzDiffApp/db/migrations/20210306001825_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306002050_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306001825_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306002050_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index abd00d886..d89905bb9 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -31,7 +31,7 @@
+   "dependencies": {
+     "prisma": "~2.17",
+     "@prisma/client": "~2.17",
+-    "blitz": "0.31.1",
++    "blitz": "0.30.0-canary.15",
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+     "react-error-boundary": "3.1.1",
