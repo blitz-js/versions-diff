@@ -1,0 +1,512 @@
+diff --git a/BlitzDiffApp/.npmrc b/BlitzDiffApp/.npmrc
+index cffe8cdef..1b78f1c6f 100644
+--- a/BlitzDiffApp/.npmrc
++++ b/BlitzDiffApp/.npmrc
+@@ -1 +1,2 @@
+ save-exact=true
++legacy-peer-deps=true
+diff --git a/BlitzDiffApp/README.md b/BlitzDiffApp/README.md
+index f1ff724d4..6d780988c 100644
+--- a/BlitzDiffApp/README.md
++++ b/BlitzDiffApp/README.md
+@@ -9,7 +9,7 @@ This is a [Blitz.js](https://github.com/blitz-js/blitz) app.
+ Run your app in the development mode.
+ 
+ ```
+-blitz start
++blitz dev
+ ```
+ 
+ Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+@@ -47,12 +47,13 @@ Blitz comes with a powerful CLI that is designed to make development easy and fa
+ ```
+   blitz [COMMAND]
+ 
++  dev       Start a development server
+   build     Create a production build
+-  console   Run the Blitz console REPL
+-  db        Run database commands
++  start     Start a production server
++  prisma    Run prisma commands
+   generate  Generate new files for your Blitz project
++  console   Run the Blitz console REPL
+   help      display help for blitz
+-  start     Start a development server
+   test      Run project tests
+ ```
+ 
+diff --git a/BlitzDiffApp/app/auth/components/LoginForm.tsx b/BlitzDiffApp/app/auth/components/LoginForm.tsx
+index e23765149..a3a6e4b66 100644
+--- a/BlitzDiffApp/app/auth/components/LoginForm.tsx
++++ b/BlitzDiffApp/app/auth/components/LoginForm.tsx
+@@ -3,7 +3,7 @@ import { AuthenticationError, Link, useMutation } from "blitz"
+ import { LabeledTextField } from "app/core/components/LabeledTextField"
+ import { Form, FORM_ERROR } from "app/core/components/Form"
+ import login from "app/auth/mutations/login"
+-import { LoginInput } from "app/auth/validations"
++import { Login } from "app/auth/validations"
+ 
+ type LoginFormProps = {
+   onSuccess?: () => void
+@@ -18,7 +18,7 @@ export const LoginForm = (props: LoginFormProps) => {
+ 
+       <Form
+         submitText="Login"
+-        schema={LoginInput}
++        schema={Login}
+         initialValues={{ email: "", password: "" }}
+         onSubmit={async (values) => {
+           try {
+diff --git a/BlitzDiffApp/app/auth/components/SignupForm.tsx b/BlitzDiffApp/app/auth/components/SignupForm.tsx
+index e6315e842..97fb9ab7c 100644
+--- a/BlitzDiffApp/app/auth/components/SignupForm.tsx
++++ b/BlitzDiffApp/app/auth/components/SignupForm.tsx
+@@ -3,7 +3,7 @@ import { useMutation } from "blitz"
+ import { LabeledTextField } from "app/core/components/LabeledTextField"
+ import { Form, FORM_ERROR } from "app/core/components/Form"
+ import signup from "app/auth/mutations/signup"
+-import { SignupInput } from "app/auth/validations"
++import { Signup } from "app/auth/validations"
+ 
+ type SignupFormProps = {
+   onSuccess?: () => void
+@@ -18,7 +18,7 @@ export const SignupForm = (props: SignupFormProps) => {
+ 
+       <Form
+         submitText="Create Account"
+-        schema={SignupInput}
++        schema={Signup}
+         initialValues={{ email: "", password: "" }}
+         onSubmit={async (values) => {
+           try {
+diff --git a/BlitzDiffApp/app/auth/mutations/changePassword.ts b/BlitzDiffApp/app/auth/mutations/changePassword.ts
+index 64997cbd3..5cc49a9d7 100644
+--- a/BlitzDiffApp/app/auth/mutations/changePassword.ts
++++ b/BlitzDiffApp/app/auth/mutations/changePassword.ts
+@@ -1,21 +1,23 @@
+-import { Ctx, NotFoundError, SecurePassword } from "blitz"
++import { NotFoundError, SecurePassword, resolver } from "blitz"
+ import db from "db"
+ import { authenticateUser } from "./login"
+-import { ChangePasswordInput, ChangePasswordInputType } from "../validations"
++import { ChangePassword } from "../validations"
+ 
+-export default async function changePassword(input: ChangePasswordInputType, ctx: Ctx) {
+-  ctx.session.authorize()
+-  const { currentPassword, newPassword } = ChangePasswordInput.parse(input)
++export default resolver.pipe(
++  resolver.zod(ChangePassword),
++  resolver.authorize(),
++  async ({ currentPassword, newPassword }, ctx) => {
++    const user = await db.user.findFirst({ where: { id: ctx.session.userId! } })
++    if (!user) throw new NotFoundError()
+ 
+-  const user = await db.user.findFirst({ where: { id: ctx.session.userId } })
+-  if (!user) throw new NotFoundError()
+-  await authenticateUser(user.email, currentPassword)
++    await authenticateUser(user.email, currentPassword)
+ 
+-  const hashedPassword = await SecurePassword.hash(newPassword)
+-  await db.user.update({
+-    where: { id: user.id },
+-    data: { hashedPassword },
+-  })
++    const hashedPassword = await SecurePassword.hash(newPassword)
++    await db.user.update({
++      where: { id: user.id },
++      data: { hashedPassword },
++    })
+ 
+-  return true
+-}
++    return true
++  }
++)
+diff --git a/BlitzDiffApp/app/auth/mutations/forgotPassword.test.ts b/BlitzDiffApp/app/auth/mutations/forgotPassword.test.ts
+index 1b3f47d84..d5d0098f9 100644
+--- a/BlitzDiffApp/app/auth/mutations/forgotPassword.test.ts
++++ b/BlitzDiffApp/app/auth/mutations/forgotPassword.test.ts
+@@ -1,4 +1,4 @@
+-import { hash256 } from "blitz"
++import { hash256, Ctx } from "blitz"
+ import forgotPassword from "./forgotPassword"
+ import db from "db"
+ import previewEmail from "preview-email"
+@@ -16,7 +16,7 @@ jest.mock("preview-email", () => jest.fn())
+ 
+ describe("forgotPassword mutation", () => {
+   it("does not throw error if user doesn't exist", async () => {
+-    await expect(forgotPassword({ email: "no-user@email.com" })).resolves.not.toThrow()
++    await expect(forgotPassword({ email: "no-user@email.com" }, {} as Ctx)).resolves.not.toThrow()
+   })
+ 
+   it("works correctly", async () => {
+@@ -38,7 +38,7 @@ describe("forgotPassword mutation", () => {
+     })
+ 
+     // Invoke the mutation
+-    await forgotPassword({ email: user.email })
++    await forgotPassword({ email: user.email }, {} as Ctx)
+ 
+     const tokens = await db.token.findMany({ where: { userId: user.id } })
+     const token = tokens[0]
+diff --git a/BlitzDiffApp/app/auth/mutations/forgotPassword.ts b/BlitzDiffApp/app/auth/mutations/forgotPassword.ts
+index 08125c2a2..1cbf2a33c 100644
+--- a/BlitzDiffApp/app/auth/mutations/forgotPassword.ts
++++ b/BlitzDiffApp/app/auth/mutations/forgotPassword.ts
+@@ -1,13 +1,11 @@
+-import { generateToken, hash256 } from "blitz"
++import { resolver, generateToken, hash256 } from "blitz"
+ import db from "db"
+ import { forgotPasswordMailer } from "mailers/forgotPasswordMailer"
+-import { ForgotPasswordInput, ForgotPasswordInputType } from "../validations"
++import { ForgotPassword } from "../validations"
+ 
+ const RESET_PASSWORD_TOKEN_EXPIRATION_IN_HOURS = 4
+ 
+-export default async function forgotPassword(input: ForgotPasswordInputType) {
+-  const { email } = ForgotPasswordInput.parse(input)
+-
++export default resolver.pipe(resolver.zod(ForgotPassword), async ({ email }) => {
+   // 1. Get the user
+   const user = await db.user.findFirst({ where: { email: email.toLowerCase() } })
+ 
+@@ -40,4 +38,4 @@ export default async function forgotPassword(input: ForgotPasswordInputType) {
+ 
+   // 8. Return the same result whether a password reset email was sent or not
+   return
+-}
++})
+diff --git a/BlitzDiffApp/app/auth/mutations/login.ts b/BlitzDiffApp/app/auth/mutations/login.ts
+index 3b010e651..9d62a7567 100644
+--- a/BlitzDiffApp/app/auth/mutations/login.ts
++++ b/BlitzDiffApp/app/auth/mutations/login.ts
+@@ -1,6 +1,6 @@
+-import { Ctx, SecurePassword, AuthenticationError } from "blitz"
++import { resolver, SecurePassword, AuthenticationError } from "blitz"
+ import db from "db"
+-import { LoginInput, LoginInputType } from "../validations"
++import { Login } from "../validations"
+ 
+ export const authenticateUser = async (email: string, password: string) => {
+   const user = await db.user.findFirst({ where: { email } })
+@@ -18,14 +18,11 @@ export const authenticateUser = async (email: string, password: string) => {
+   return rest
+ }
+ 
+-export default async function login(input: LoginInputType, ctx: Ctx) {
+-  // This throws an error if input is invalid
+-  const { email, password } = LoginInput.parse(input)
+-
++export default resolver.pipe(resolver.zod(Login), async ({ email, password }, ctx) => {
+   // This throws an error if credentials are invalid
+   const user = await authenticateUser(email, password)
+ 
+-  await ctx.session.create({ userId: user.id, roles: [user.role] })
++  await ctx.session.$create({ userId: user.id, roles: [user.role] })
+ 
+   return user
+-}
++})
+diff --git a/BlitzDiffApp/app/auth/mutations/logout.ts b/BlitzDiffApp/app/auth/mutations/logout.ts
+index eeaca86d1..c2f2fefd8 100644
+--- a/BlitzDiffApp/app/auth/mutations/logout.ts
++++ b/BlitzDiffApp/app/auth/mutations/logout.ts
+@@ -1,5 +1,5 @@
+ import { Ctx } from "blitz"
+ 
+ export default async function logout(_: any, ctx: Ctx) {
+-  return await ctx.session.revoke()
++  return await ctx.session.$revoke()
+ }
+diff --git a/BlitzDiffApp/app/auth/mutations/resetPassword.ts b/BlitzDiffApp/app/auth/mutations/resetPassword.ts
+index 0bf78cb4d..ece656d4c 100644
+--- a/BlitzDiffApp/app/auth/mutations/resetPassword.ts
++++ b/BlitzDiffApp/app/auth/mutations/resetPassword.ts
+@@ -1,6 +1,6 @@
+-import { Ctx, SecurePassword, hash256 } from "blitz"
++import { resolver, SecurePassword, hash256 } from "blitz"
+ import db from "db"
+-import { ResetPasswordInput, ResetPasswordInputType } from "../validations"
++import { ResetPassword } from "../validations"
+ import login from "./login"
+ 
+ export class ResetPasswordError extends Error {
+@@ -8,9 +8,7 @@ export class ResetPasswordError extends Error {
+   message = "Reset password link is invalid or it has expired."
+ }
+ 
+-export default async function resetPassword(input: ResetPasswordInputType, ctx: Ctx) {
+-  const { password, token } = ResetPasswordInput.parse(input)
+-
++export default resolver.pipe(resolver.zod(ResetPassword), async ({ password, token }, ctx) => {
+   // 1. Try to find this token in the database
+   const hashedToken = hash256(token)
+   const possibleToken = await db.token.findFirst({
+@@ -46,4 +44,4 @@ export default async function resetPassword(input: ResetPasswordInputType, ctx:
+   await login({ email: user.email, password }, ctx)
+ 
+   return true
+-}
++})
+diff --git a/BlitzDiffApp/app/auth/mutations/signup.ts b/BlitzDiffApp/app/auth/mutations/signup.ts
+index f10cf75e7..15109e632 100644
+--- a/BlitzDiffApp/app/auth/mutations/signup.ts
++++ b/BlitzDiffApp/app/auth/mutations/signup.ts
+@@ -1,18 +1,14 @@
+-import { Ctx, SecurePassword } from "blitz"
++import { resolver, SecurePassword } from "blitz"
+ import db from "db"
+-import { SignupInput, SignupInputType } from "app/auth/validations"
+-
+-export default async function signup(input: SignupInputType, ctx: Ctx) {
+-  // This throws an error if input is invalid
+-  const { email, password } = SignupInput.parse(input)
++import { Signup } from "app/auth/validations"
+ 
++export default resolver.pipe(resolver.zod(Signup), async ({ email, password }, ctx) => {
+   const hashedPassword = await SecurePassword.hash(password)
+   const user = await db.user.create({
+     data: { email: email.toLowerCase(), hashedPassword, role: "user" },
+     select: { id: true, name: true, email: true, role: true },
+   })
+ 
+-  await ctx.session.create({ userId: user.id, roles: [user.role] })
+-
++  await ctx.session.$create({ userId: user.id, roles: [user.role] })
+   return user
+-}
++})
+diff --git a/BlitzDiffApp/app/auth/pages/forgot-password.tsx b/BlitzDiffApp/app/auth/pages/forgot-password.tsx
+index 2cac6b9f2..13710772a 100644
+--- a/BlitzDiffApp/app/auth/pages/forgot-password.tsx
++++ b/BlitzDiffApp/app/auth/pages/forgot-password.tsx
+@@ -2,7 +2,7 @@ import { BlitzPage, useMutation } from "blitz"
+ import Layout from "app/core/layouts/Layout"
+ import { LabeledTextField } from "app/core/components/LabeledTextField"
+ import { Form, FORM_ERROR } from "app/core/components/Form"
+-import { ForgotPasswordInput } from "app/auth/validations"
++import { ForgotPassword } from "app/auth/validations"
+ import forgotPassword from "app/auth/mutations/forgotPassword"
+ 
+ const ForgotPasswordPage: BlitzPage = () => {
+@@ -23,7 +23,7 @@ const ForgotPasswordPage: BlitzPage = () => {
+       ) : (
+         <Form
+           submitText="Send Reset Password Instructions"
+-          schema={ForgotPasswordInput}
++          schema={ForgotPassword}
+           initialValues={{ email: "" }}
+           onSubmit={async (values) => {
+             try {
+diff --git a/BlitzDiffApp/app/auth/pages/reset-password.tsx b/BlitzDiffApp/app/auth/pages/reset-password.tsx
+index 8068a11e9..f739b0f2d 100644
+--- a/BlitzDiffApp/app/auth/pages/reset-password.tsx
++++ b/BlitzDiffApp/app/auth/pages/reset-password.tsx
+@@ -2,7 +2,7 @@ import { BlitzPage, useRouterQuery, Link, useMutation } from "blitz"
+ import Layout from "app/core/layouts/Layout"
+ import { LabeledTextField } from "app/core/components/LabeledTextField"
+ import { Form, FORM_ERROR } from "app/core/components/Form"
+-import { ResetPasswordInput } from "app/auth/validations"
++import { ResetPassword } from "app/auth/validations"
+ import resetPassword from "app/auth/mutations/resetPassword"
+ 
+ const ResetPasswordPage: BlitzPage = () => {
+@@ -23,7 +23,7 @@ const ResetPasswordPage: BlitzPage = () => {
+       ) : (
+         <Form
+           submitText="Reset Password"
+-          schema={ResetPasswordInput}
++          schema={ResetPassword}
+           initialValues={{ password: "", passwordConfirmation: "", token: query.token as string }}
+           onSubmit={async (values) => {
+             try {
+diff --git a/BlitzDiffApp/app/auth/validations.ts b/BlitzDiffApp/app/auth/validations.ts
+index 2c4aaf522..6f4378992 100644
+--- a/BlitzDiffApp/app/auth/validations.ts
++++ b/BlitzDiffApp/app/auth/validations.ts
+@@ -2,24 +2,21 @@ import * as z from "zod"
+ 
+ const password = z.string().min(10).max(100)
+ 
+-export const SignupInput = z.object({
++export const Signup = z.object({
+   email: z.string().email(),
+   password,
+ })
+-export type SignupInputType = z.infer<typeof SignupInput>
+ 
+-export const LoginInput = z.object({
++export const Login = z.object({
+   email: z.string().email(),
+   password: z.string(),
+ })
+-export type LoginInputType = z.infer<typeof LoginInput>
+ 
+-export const ForgotPasswordInput = z.object({
++export const ForgotPassword = z.object({
+   email: z.string().email(),
+ })
+-export type ForgotPasswordInputType = z.infer<typeof ForgotPasswordInput>
+ 
+-export const ResetPasswordInput = z
++export const ResetPassword = z
+   .object({
+     password: password,
+     passwordConfirmation: password,
+@@ -29,10 +26,8 @@ export const ResetPasswordInput = z
+     message: "Passwords don't match",
+     path: ["passwordConfirmation"], // set the path of the error
+   })
+-export type ResetPasswordInputType = z.infer<typeof ResetPasswordInput>
+ 
+-export const ChangePasswordInput = z.object({
++export const ChangePassword = z.object({
+   currentPassword: z.string(),
+   newPassword: password,
+ })
+-export type ChangePasswordInputType = z.infer<typeof ChangePasswordInput>
+diff --git a/BlitzDiffApp/app/core/components/Form.tsx b/BlitzDiffApp/app/core/components/Form.tsx
+index 1e5e0f0c3..7e74e88d1 100644
+--- a/BlitzDiffApp/app/core/components/Form.tsx
++++ b/BlitzDiffApp/app/core/components/Form.tsx
+@@ -3,15 +3,16 @@ import { Form as FinalForm, FormProps as FinalFormProps } from "react-final-form
+ import * as z from "zod"
+ export { FORM_ERROR } from "final-form"
+ 
+-type FormProps<S extends z.ZodType<any, any>> = {
++export interface FormProps<S extends z.ZodType<any, any>>
++  extends Omit<PropsWithoutRef<JSX.IntrinsicElements["form"]>, "onSubmit"> {
+   /** All your form fields */
+-  children: ReactNode
++  children?: ReactNode
+   /** Text to display in the submit button */
+   submitText?: string
+   schema?: S
+   onSubmit: FinalFormProps<z.infer<S>>["onSubmit"]
+   initialValues?: FinalFormProps<z.infer<S>>["initialValues"]
+-} & Omit<PropsWithoutRef<JSX.IntrinsicElements["form"]>, "onSubmit">
++}
+ 
+ export function Form<S extends z.ZodType<any, any>>({
+   children,
+diff --git a/BlitzDiffApp/app/pages/_app.tsx b/BlitzDiffApp/app/pages/_app.tsx
+index 465065a31..d6f7b831e 100644
+--- a/BlitzDiffApp/app/pages/_app.tsx
++++ b/BlitzDiffApp/app/pages/_app.tsx
+@@ -1,5 +1,12 @@
+-import { AppProps, ErrorComponent, useRouter, AuthenticationError, AuthorizationError } from "blitz"
+-import { ErrorBoundary, FallbackProps } from "react-error-boundary"
++import {
++  AppProps,
++  ErrorComponent,
++  useRouter,
++  AuthenticationError,
++  AuthorizationError,
++  ErrorFallbackProps,
++} from "blitz"
++import { ErrorBoundary } from "react-error-boundary"
+ import { queryCache } from "react-query"
+ import LoginForm from "app/auth/components/LoginForm"
+ 
+@@ -22,22 +29,19 @@ export default function App({ Component, pageProps }: AppProps) {
+   )
+ }
+ 
+-function RootErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
++function RootErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
+   if (error instanceof AuthenticationError) {
+     return <LoginForm onSuccess={resetErrorBoundary} />
+   } else if (error instanceof AuthorizationError) {
+     return (
+       <ErrorComponent
+-        statusCode={(error as any).statusCode}
++        statusCode={error.statusCode}
+         title="Sorry, you are not authorized to access this"
+       />
+     )
+   } else {
+     return (
+-      <ErrorComponent
+-        statusCode={(error as any)?.statusCode || 400}
+-        title={error?.message || error?.name}
+-      />
++      <ErrorComponent statusCode={error.statusCode || 400} title={error.message || error.name} />
+     )
+   }
+ }
+diff --git a/BlitzDiffApp/app/pages/index.tsx b/BlitzDiffApp/app/pages/index.tsx
+index c04bbb66c..aba012d05 100644
+--- a/BlitzDiffApp/app/pages/index.tsx
++++ b/BlitzDiffApp/app/pages/index.tsx
+@@ -84,7 +84,7 @@ const Home: BlitzPage = () => {
+             <code>Ctrl + c</code>
+           </pre>
+           <pre>
+-            <code>blitz start</code>
++            <code>blitz dev</code>
+           </pre>
+           <p>
+             and go to{" "}
+diff --git a/BlitzDiffApp/db/migrations/20210306011928_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306011014_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306011928_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306011014_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index c00d2fbf5..735653821 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -2,9 +2,10 @@
+   "name": "BlitzDiffApp",
+   "version": "1.0.0",
+   "scripts": {
++    "dev": "blitz dev",
++    "build": "blitz build",
+     "start": "blitz start",
+     "studio": "blitz prisma studio",
+-    "build": "blitz build",
+     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx .",
+     "test": "jest",
+     "test:watch": "jest --watch"
+@@ -31,8 +32,8 @@
+     ]
+   },
+   "dependencies": {
+-    "@prisma/cli": "~2.15",
+-    "@prisma/client": "~2.15",
++    "prisma": "~2.16",
++    "@prisma/client": "~2.16",
+     "blitz": "0.30.0-canary.15",
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+@@ -50,7 +51,8 @@
+     "lint-staged": "10.5.4",
+     "prettier": "2.2.1",
+     "pretty-quick": "3.1.0",
+-    "preview-email": "3.0.3"
++    "preview-email": "3.0.3",
++    "prettier-plugin-prisma": "0.4.0"
+   },
+   "private": true
+ }
+diff --git a/BlitzDiffApp/test/setup.ts b/BlitzDiffApp/test/setup.ts
+index 4ca742763..c278ddb9e 100644
+--- a/BlitzDiffApp/test/setup.ts
++++ b/BlitzDiffApp/test/setup.ts
+@@ -1,2 +1,4 @@
+ // This is the jest 'setupFilesAfterEnv' setup file
+ // It's a good place to set globals, add global before/after hooks, etc
++
++export {} // so TS doesn't complain
+diff --git a/BlitzDiffApp/tsconfig.json b/BlitzDiffApp/tsconfig.json
+index e1d2226fa..c6d5bee62 100644
+--- a/BlitzDiffApp/tsconfig.json
++++ b/BlitzDiffApp/tsconfig.json
+@@ -18,6 +18,6 @@
+     "incremental": true,
+     "tsBuildInfoFile": ".tsbuildinfo"
+   },
+-  "exclude": ["node_modules"],
++  "exclude": ["node_modules", "**/*.e2e.ts", "cypress"],
+   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"]
+ }
