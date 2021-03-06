@@ -1,0 +1,307 @@
+diff --git a/BlitzDiffApp/.npmrc b/BlitzDiffApp/.npmrc
+index cffe8cdef..1b78f1c6f 100644
+--- a/BlitzDiffApp/.npmrc
++++ b/BlitzDiffApp/.npmrc
+@@ -1 +1,2 @@
+ save-exact=true
++legacy-peer-deps=true
+diff --git a/BlitzDiffApp/README.md b/BlitzDiffApp/README.md
+index f1ff724d4..6d780988c 100644
+--- a/BlitzDiffApp/README.md
++++ b/BlitzDiffApp/README.md
+@@ -9,7 +9,7 @@ This is a [Blitz.js](https://github.com/blitz-js/blitz) app.
+ Run your app in the development mode.
+ 
+ ```
+-blitz start
++blitz dev
+ ```
+ 
+ Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+@@ -47,12 +47,13 @@ Blitz comes with a powerful CLI that is designed to make development easy and fa
+ ```
+   blitz [COMMAND]
+ 
++  dev       Start a development server
+   build     Create a production build
+-  console   Run the Blitz console REPL
+-  db        Run database commands
++  start     Start a production server
++  prisma    Run prisma commands
+   generate  Generate new files for your Blitz project
++  console   Run the Blitz console REPL
+   help      display help for blitz
+-  start     Start a development server
+   test      Run project tests
+ ```
+ 
+diff --git a/BlitzDiffApp/app/auth/mutations/login.ts b/BlitzDiffApp/app/auth/mutations/login.ts
+index 9d62a7567..704d1f244 100644
+--- a/BlitzDiffApp/app/auth/mutations/login.ts
++++ b/BlitzDiffApp/app/auth/mutations/login.ts
+@@ -1,6 +1,7 @@
+ import { resolver, SecurePassword, AuthenticationError } from "blitz"
+ import db from "db"
+ import { Login } from "../validations"
++import { Role } from "types"
+ 
+ export const authenticateUser = async (email: string, password: string) => {
+   const user = await db.user.findFirst({ where: { email } })
+@@ -22,7 +23,7 @@ export default resolver.pipe(resolver.zod(Login), async ({ email, password }, ct
+   // This throws an error if credentials are invalid
+   const user = await authenticateUser(email, password)
+ 
+-  await ctx.session.$create({ userId: user.id, roles: [user.role] })
++  await ctx.session.$create({ userId: user.id, roles: [user.role as Role] })
+ 
+   return user
+ })
+diff --git a/BlitzDiffApp/app/auth/mutations/signup.ts b/BlitzDiffApp/app/auth/mutations/signup.ts
+index 15109e632..f6148bbc0 100644
+--- a/BlitzDiffApp/app/auth/mutations/signup.ts
++++ b/BlitzDiffApp/app/auth/mutations/signup.ts
+@@ -1,14 +1,15 @@
+ import { resolver, SecurePassword } from "blitz"
+ import db from "db"
+ import { Signup } from "app/auth/validations"
++import { Role } from "types"
+ 
+ export default resolver.pipe(resolver.zod(Signup), async ({ email, password }, ctx) => {
+   const hashedPassword = await SecurePassword.hash(password)
+   const user = await db.user.create({
+-    data: { email: email.toLowerCase(), hashedPassword, role: "user" },
++    data: { email: email.toLowerCase(), hashedPassword, role: "USER" },
+     select: { id: true, name: true, email: true, role: true },
+   })
+ 
+-  await ctx.session.$create({ userId: user.id, roles: [user.role] })
++  await ctx.session.$create({ userId: user.id, roles: [user.role as Role] })
+   return user
+ })
+diff --git a/BlitzDiffApp/app/core/components/Form.tsx b/BlitzDiffApp/app/core/components/Form.tsx
+index 1e5e0f0c3..7e74e88d1 100644
+--- a/BlitzDiffApp/app/core/components/Form.tsx
++++ b/BlitzDiffApp/app/core/components/Form.tsx
+@@ -3,15 +3,16 @@ import { Form as FinalForm, FormProps as FinalFormProps } from "react-final-form
+ import * as z from "zod"
+ export { FORM_ERROR } from "final-form"
+ 
+-type FormProps<S extends z.ZodType<any, any>> = {
++export interface FormProps<S extends z.ZodType<any, any>>
++  extends Omit<PropsWithoutRef<JSX.IntrinsicElements["form"]>, "onSubmit"> {
+   /** All your form fields */
+-  children: ReactNode
++  children?: ReactNode
+   /** Text to display in the submit button */
+   submitText?: string
+   schema?: S
+   onSubmit: FinalFormProps<z.infer<S>>["onSubmit"]
+   initialValues?: FinalFormProps<z.infer<S>>["initialValues"]
+-} & Omit<PropsWithoutRef<JSX.IntrinsicElements["form"]>, "onSubmit">
++}
+ 
+ export function Form<S extends z.ZodType<any, any>>({
+   children,
+diff --git a/BlitzDiffApp/app/pages/_app.tsx b/BlitzDiffApp/app/pages/_app.tsx
+index 465065a31..d6f7b831e 100644
+--- a/BlitzDiffApp/app/pages/_app.tsx
++++ b/BlitzDiffApp/app/pages/_app.tsx
+@@ -1,5 +1,12 @@
+-import { AppProps, ErrorComponent, useRouter, AuthenticationError, AuthorizationError } from "blitz"
+-import { ErrorBoundary, FallbackProps } from "react-error-boundary"
++import {
++  AppProps,
++  ErrorComponent,
++  useRouter,
++  AuthenticationError,
++  AuthorizationError,
++  ErrorFallbackProps,
++} from "blitz"
++import { ErrorBoundary } from "react-error-boundary"
+ import { queryCache } from "react-query"
+ import LoginForm from "app/auth/components/LoginForm"
+ 
+@@ -22,22 +29,19 @@ export default function App({ Component, pageProps }: AppProps) {
+   )
+ }
+ 
+-function RootErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
++function RootErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
+   if (error instanceof AuthenticationError) {
+     return <LoginForm onSuccess={resetErrorBoundary} />
+   } else if (error instanceof AuthorizationError) {
+     return (
+       <ErrorComponent
+-        statusCode={(error as any).statusCode}
++        statusCode={error.statusCode}
+         title="Sorry, you are not authorized to access this"
+       />
+     )
+   } else {
+     return (
+-      <ErrorComponent
+-        statusCode={(error as any)?.statusCode || 400}
+-        title={error?.message || error?.name}
+-      />
++      <ErrorComponent statusCode={error.statusCode || 400} title={error.message || error.name} />
+     )
+   }
+ }
+diff --git a/BlitzDiffApp/app/pages/index.tsx b/BlitzDiffApp/app/pages/index.tsx
+index c04bbb66c..aba012d05 100644
+--- a/BlitzDiffApp/app/pages/index.tsx
++++ b/BlitzDiffApp/app/pages/index.tsx
+@@ -84,7 +84,7 @@ const Home: BlitzPage = () => {
+             <code>Ctrl + c</code>
+           </pre>
+           <pre>
+-            <code>blitz start</code>
++            <code>blitz dev</code>
+           </pre>
+           <p>
+             and go to{" "}
+diff --git a/BlitzDiffApp/db/migrations/20210306011449_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306010756_initial_migration/migration.sql
+similarity index 97%
+rename from BlitzDiffApp/db/migrations/20210306011449_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306010756_initial_migration/migration.sql
+index 6df839c7a..0b34cc718 100644
+--- a/BlitzDiffApp/db/migrations/20210306011449_initial_migration/migration.sql
++++ b/BlitzDiffApp/db/migrations/20210306010756_initial_migration/migration.sql
+@@ -6,7 +6,7 @@ CREATE TABLE "User" (
+     "name" TEXT,
+     "email" TEXT NOT NULL,
+     "hashedPassword" TEXT,
+-    "role" TEXT NOT NULL DEFAULT 'user'
++    "role" TEXT NOT NULL DEFAULT 'USER'
+ );
+ 
+ -- CreateTable
+diff --git a/BlitzDiffApp/db/schema.prisma b/BlitzDiffApp/db/schema.prisma
+index dde411b62..1ad932610 100644
+--- a/BlitzDiffApp/db/schema.prisma
++++ b/BlitzDiffApp/db/schema.prisma
+@@ -13,20 +13,20 @@ generator client {
+ // --------------------------------------
+ 
+ model User {
+-  id             Int       @default(autoincrement()) @id
+-  createdAt      DateTime  @default(now())
+-  updatedAt      DateTime  @updatedAt
++  id             Int      @id @default(autoincrement())
++  createdAt      DateTime @default(now())
++  updatedAt      DateTime @updatedAt
+   name           String?
+-  email          String    @unique
++  email          String   @unique
+   hashedPassword String?
+-  role           String    @default("user")
++  role           String   @default("USER")
+ 
+-  tokens         Token[]
+-  sessions       Session[]
++  tokens   Token[]
++  sessions Session[]
+ }
+ 
+ model Session {
+-  id                 Int       @default(autoincrement()) @id
++  id                 Int       @id @default(autoincrement())
+   createdAt          DateTime  @default(now())
+   updatedAt          DateTime  @updatedAt
+   expiresAt          DateTime?
+@@ -36,14 +36,14 @@ model Session {
+   publicData         String?
+   privateData        String?
+ 
+-  user               User?     @relation(fields: [userId], references: [id])
+-  userId             Int?
++  user   User? @relation(fields: [userId], references: [id])
++  userId Int?
+ }
+ 
+ model Token {
+-  id          Int       @default(autoincrement()) @id
+-  createdAt   DateTime  @default(now())
+-  updatedAt   DateTime  @updatedAt
++  id          Int      @id @default(autoincrement())
++  createdAt   DateTime @default(now())
++  updatedAt   DateTime @updatedAt
+   hashedToken String
+   type        String
+   // See note below about TokenType enum
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index c00d2fbf5..735653821 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -2,9 +2,10 @@
+   "name": "BlitzDiffApp",
+   "version": "1.0.0",
+   "scripts": {
++    "dev": "blitz dev",
++    "build": "blitz build",
+     "start": "blitz start",
+     "studio": "blitz prisma studio",
+-    "build": "blitz build",
+     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx .",
+     "test": "jest",
+     "test:watch": "jest --watch"
+@@ -31,8 +32,8 @@
+     ]
+   },
+   "dependencies": {
+-    "@prisma/cli": "~2.15",
+-    "@prisma/client": "~2.15",
++    "prisma": "~2.16",
++    "@prisma/client": "~2.16",
+     "blitz": "0.30.0-canary.15",
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+@@ -50,7 +51,8 @@
+     "lint-staged": "10.5.4",
+     "prettier": "2.2.1",
+     "pretty-quick": "3.1.0",
+-    "preview-email": "3.0.3"
++    "preview-email": "3.0.3",
++    "prettier-plugin-prisma": "0.4.0"
+   },
+   "private": true
+ }
+diff --git a/BlitzDiffApp/tsconfig.json b/BlitzDiffApp/tsconfig.json
+index e1d2226fa..c6d5bee62 100644
+--- a/BlitzDiffApp/tsconfig.json
++++ b/BlitzDiffApp/tsconfig.json
+@@ -18,6 +18,6 @@
+     "incremental": true,
+     "tsBuildInfoFile": ".tsbuildinfo"
+   },
+-  "exclude": ["node_modules"],
++  "exclude": ["node_modules", "**/*.e2e.ts", "cypress"],
+   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"]
+ }
+diff --git a/BlitzDiffApp/types.ts b/BlitzDiffApp/types.ts
+index 64bc8a6dc..6c396af30 100644
+--- a/BlitzDiffApp/types.ts
++++ b/BlitzDiffApp/types.ts
+@@ -1,16 +1,19 @@
+ import { DefaultCtx, SessionContext } from "blitz"
+-import { simpleRolesIsAuthorized } from "@blitzjs/server"
++import { SimpleRolesIsAuthorized } from "@blitzjs/server"
+ import { User } from "db"
+ 
++// Note: You should switch to Postgres and then use a DB enum for role type
++type Role = "ADMIN" | "USER"
++
+ declare module "blitz" {
+   export interface Ctx extends DefaultCtx {
+     session: SessionContext
+   }
+   export interface Session {
+-    isAuthorized: typeof simpleRolesIsAuthorized
++    isAuthorized: SimpleRolesIsAuthorized<Role>
+     PublicData: {
+       userId: User["id"]
+-      roles: string[]
++      roles: Role[]
+     }
+   }
+ }

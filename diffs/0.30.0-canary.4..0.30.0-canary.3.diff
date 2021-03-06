@@ -1,0 +1,44 @@
+diff --git a/BlitzDiffApp/app/pages/_app.tsx b/BlitzDiffApp/app/pages/_app.tsx
+index 802e12ff4..465065a31 100644
+--- a/BlitzDiffApp/app/pages/_app.tsx
++++ b/BlitzDiffApp/app/pages/_app.tsx
+@@ -1,12 +1,5 @@
+-import {
+-  AppProps,
+-  ErrorComponent,
+-  useRouter,
+-  AuthenticationError,
+-  AuthorizationError,
+-  ErrorFallbackProps,
+-} from "blitz"
+-import { ErrorBoundary } from "react-error-boundary"
++import { AppProps, ErrorComponent, useRouter, AuthenticationError, AuthorizationError } from "blitz"
++import { ErrorBoundary, FallbackProps } from "react-error-boundary"
+ import { queryCache } from "react-query"
+ import LoginForm from "app/auth/components/LoginForm"
+ 
+@@ -29,7 +22,7 @@ export default function App({ Component, pageProps }: AppProps) {
+   )
+ }
+ 
+-function RootErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
++function RootErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+   if (error instanceof AuthenticationError) {
+     return <LoginForm onSuccess={resetErrorBoundary} />
+   } else if (error instanceof AuthorizationError) {
+@@ -41,7 +34,10 @@ function RootErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
+     )
+   } else {
+     return (
+-      <ErrorComponent statusCode={error.statusCode || 400} title={error.message || error.name} />
++      <ErrorComponent
++        statusCode={(error as any)?.statusCode || 400}
++        title={error?.message || error?.name}
++      />
+     )
+   }
+ }
+diff --git a/BlitzDiffApp/db/migrations/20210306011232_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306011449_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306011232_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306011449_initial_migration/migration.sql
