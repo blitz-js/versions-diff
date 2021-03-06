@@ -1,0 +1,297 @@
+diff --git a/BlitzDiffApp/.gitignore b/BlitzDiffApp/.gitignore
+index 3665bf5ce..70053f9b5 100644
+--- a/BlitzDiffApp/.gitignore
++++ b/BlitzDiffApp/.gitignore
+@@ -11,6 +11,7 @@ web_modules/
+ /.blitz/
+ /.next/
+ *.sqlite
++*.sqlite-journal
+ .now
+ .blitz-console-history
+ blitz-log.log
+diff --git a/BlitzDiffApp/README.md b/BlitzDiffApp/README.md
+index 6d780988c..6d00b24a4 100644
+--- a/BlitzDiffApp/README.md
++++ b/BlitzDiffApp/README.md
+@@ -33,8 +33,6 @@ DATABASE_URL=postgresql://<YOUR_DB_USERNAME>@localhost:5432/BlitzDiffApp_test
+ Runs your tests using Jest.
+ 
+ ```
+-blitz test
+-or
+ yarn test
+ ```
+ 
+@@ -66,20 +64,6 @@ Here is the starting structure of your app.
+ ```
+ BlitzDiffApp
+ ├── app/
+-│   ├── core/
+-│   │   ├── components/
+-│   │   │   ├── Form.tsx
+-│   │   │   └── LabeledTextField.tsx
+-│   │   ├── hooks/
+-│   │   │   └── useCurrentUser.ts
+-│   │   └── layouts/
+-│   │       └── Layout.tsx
+-│   ├── pages/
+-│   │   ├── 404.tsx
+-│   │   ├── _app.tsx
+-│   │   ├── _document.tsx
+-│   │   ├── index.test.tsx
+-│   │   └── index.tsx
+ │   ├── api/
+ │   ├── auth/
+ │   │   ├── components/
+@@ -87,13 +71,33 @@ BlitzDiffApp
+ │   │   │   └── SignupForm.tsx
+ │   │   ├── mutations/
+ │   │   │   ├── changePassword.ts
++│   │   │   ├── forgotPassword.test.ts
++│   │   │   ├── forgotPassword.ts
+ │   │   │   ├── login.ts
+ │   │   │   ├── logout.ts
++│   │   │   ├── resetPassword.test.ts
++│   │   │   ├── resetPassword.ts
+ │   │   │   └── signup.ts
+ │   │   ├── pages/
++│   │   │   ├── forgot-password.tsx
+ │   │   │   ├── login.tsx
++│   │   │   ├── reset-password.tsx
+ │   │   │   └── signup.tsx
+ │   │   └── validations.ts
++│   ├── core/
++│   │   ├── components/
++│   │   │   ├── Form.tsx
++│   │   │   └── LabeledTextField.tsx
++│   │   ├── hooks/
++│   │   │   └── useCurrentUser.ts
++│   │   └── layouts/
++│   │       └── Layout.tsx
++│   ├── pages/
++│   │   ├── 404.tsx
++│   │   ├── _app.tsx
++│   │   ├── _document.tsx
++│   │   ├── index.test.tsx
++│   │   └── index.tsx
+ │   └── users/
+ │       └── queries/
+ │           └── getCurrentUser.ts
+@@ -102,6 +106,8 @@ BlitzDiffApp
+ │   ├── schema.prisma
+ │   └── seeds.ts
+ ├── integrations/
++├── mailers/
++│   └── forgotPasswordMailer.ts
+ ├── public/
+ │   ├── favicon.ico*
+ │   └── logo.png
+@@ -114,6 +120,7 @@ BlitzDiffApp
+ ├── jest.config.js
+ ├── package.json
+ ├── tsconfig.json
++├── types.d.ts
+ ├── types.ts
+ └── yarn.lock
+ ```
+diff --git a/BlitzDiffApp/app/auth/components/LoginForm.tsx b/BlitzDiffApp/app/auth/components/LoginForm.tsx
+index a3a6e4b66..8861cf009 100644
+--- a/BlitzDiffApp/app/auth/components/LoginForm.tsx
++++ b/BlitzDiffApp/app/auth/components/LoginForm.tsx
+@@ -1,4 +1,3 @@
+-import React from "react"
+ import { AuthenticationError, Link, useMutation } from "blitz"
+ import { LabeledTextField } from "app/core/components/LabeledTextField"
+ import { Form, FORM_ERROR } from "app/core/components/Form"
+diff --git a/BlitzDiffApp/app/auth/components/SignupForm.tsx b/BlitzDiffApp/app/auth/components/SignupForm.tsx
+index 97fb9ab7c..7362e35d0 100644
+--- a/BlitzDiffApp/app/auth/components/SignupForm.tsx
++++ b/BlitzDiffApp/app/auth/components/SignupForm.tsx
+@@ -1,4 +1,3 @@
+-import React from "react"
+ import { useMutation } from "blitz"
+ import { LabeledTextField } from "app/core/components/LabeledTextField"
+ import { Form, FORM_ERROR } from "app/core/components/Form"
+diff --git a/BlitzDiffApp/app/auth/pages/login.tsx b/BlitzDiffApp/app/auth/pages/login.tsx
+index 9eae76b91..45e76ff56 100644
+--- a/BlitzDiffApp/app/auth/pages/login.tsx
++++ b/BlitzDiffApp/app/auth/pages/login.tsx
+@@ -1,4 +1,3 @@
+-import React from "react"
+ import { useRouter, BlitzPage } from "blitz"
+ import Layout from "app/core/layouts/Layout"
+ import { LoginForm } from "app/auth/components/LoginForm"
+diff --git a/BlitzDiffApp/app/auth/pages/signup.tsx b/BlitzDiffApp/app/auth/pages/signup.tsx
+index f8eb87f8e..ea9de9cd1 100644
+--- a/BlitzDiffApp/app/auth/pages/signup.tsx
++++ b/BlitzDiffApp/app/auth/pages/signup.tsx
+@@ -1,4 +1,3 @@
+-import React from "react"
+ import { useRouter, BlitzPage } from "blitz"
+ import Layout from "app/core/layouts/Layout"
+ import { SignupForm } from "app/auth/components/SignupForm"
+diff --git a/BlitzDiffApp/app/core/components/Form.tsx b/BlitzDiffApp/app/core/components/Form.tsx
+index 7e74e88d1..2951abf33 100644
+--- a/BlitzDiffApp/app/core/components/Form.tsx
++++ b/BlitzDiffApp/app/core/components/Form.tsx
+@@ -1,4 +1,4 @@
+-import React, { ReactNode, PropsWithoutRef } from "react"
++import { ReactNode, PropsWithoutRef } from "react"
+ import { Form as FinalForm, FormProps as FinalFormProps } from "react-final-form"
+ import * as z from "zod"
+ export { FORM_ERROR } from "final-form"
+diff --git a/BlitzDiffApp/app/core/components/LabeledTextField.tsx b/BlitzDiffApp/app/core/components/LabeledTextField.tsx
+index a1235ffec..0d8517b8c 100644
+--- a/BlitzDiffApp/app/core/components/LabeledTextField.tsx
++++ b/BlitzDiffApp/app/core/components/LabeledTextField.tsx
+@@ -1,5 +1,5 @@
+-import React, {PropsWithoutRef} from "react"
+-import {useField} from "react-final-form"
++import { forwardRef, PropsWithoutRef } from "react"
++import { useField } from "react-final-form"
+ 
+ export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElements["input"]> {
+   /** Field name. */
+@@ -11,13 +11,13 @@ export interface LabeledTextFieldProps extends PropsWithoutRef<JSX.IntrinsicElem
+   outerProps?: PropsWithoutRef<JSX.IntrinsicElements["div"]>
+ }
+ 
+-export const LabeledTextField = React.forwardRef<HTMLInputElement, LabeledTextFieldProps>(
+-  ({name, label, outerProps, ...props}, ref) => {
++export const LabeledTextField = forwardRef<HTMLInputElement, LabeledTextFieldProps>(
++  ({ name, label, outerProps, ...props }, ref) => {
+     const {
+       input,
+-      meta: {touched, error, submitError, submitting},
++      meta: { touched, error, submitError, submitting },
+     } = useField(name, {
+-      parse: props.type === "number" ? Number : undefined
++      parse: props.type === "number" ? Number : undefined,
+     })
+ 
+     const normalizedError = Array.isArray(error) ? error.join(", ") : error || submitError
+@@ -30,7 +30,7 @@ export const LabeledTextField = React.forwardRef<HTMLInputElement, LabeledTextFi
+         </label>
+ 
+         {touched && normalizedError && (
+-          <div role="alert" style={{color: "red"}}>
++          <div role="alert" style={{ color: "red" }}>
+             {normalizedError}
+           </div>
+         )}
+@@ -53,7 +53,7 @@ export const LabeledTextField = React.forwardRef<HTMLInputElement, LabeledTextFi
+         `}</style>
+       </div>
+     )
+-  },
++  }
+ )
+ 
+ export default LabeledTextField
+diff --git a/BlitzDiffApp/app/pages/index.test.tsx b/BlitzDiffApp/app/pages/index.test.tsx
+index 66aba7111..9374c6024 100644
+--- a/BlitzDiffApp/app/pages/index.test.tsx
++++ b/BlitzDiffApp/app/pages/index.test.tsx
+@@ -1,4 +1,3 @@
+-import React from "react"
+ import { render } from "test/utils"
+ 
+ import Home from "./index"
+diff --git a/BlitzDiffApp/blitz.config.js b/BlitzDiffApp/blitz.config.js
+index fa3795200..ce6217701 100644
+--- a/BlitzDiffApp/blitz.config.js
++++ b/BlitzDiffApp/blitz.config.js
+@@ -1,4 +1,4 @@
+-const { sessionMiddleware, simpleRolesIsAuthorized } = require("@blitzjs/server")
++const { sessionMiddleware, simpleRolesIsAuthorized } = require("blitz")
+ 
+ module.exports = {
+   middleware: [
+diff --git a/BlitzDiffApp/db/migrations/20210306002912_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306004929_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306002912_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306004929_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/db/migrations/migration_lock.toml b/BlitzDiffApp/db/migrations/migration_lock.toml
+index 963afcc9a..e5e5c4705 100644
+--- a/BlitzDiffApp/db/migrations/migration_lock.toml
++++ b/BlitzDiffApp/db/migrations/migration_lock.toml
+@@ -1,2 +1,3 @@
+ # Please do not edit this file manually
++# It should be added in your version-control system (i.e. Git)
+ provider = "sqlite"
+\ No newline at end of file
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index 735653821..2bf16e494 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -10,9 +10,6 @@
+     "test": "jest",
+     "test:watch": "jest --watch"
+   },
+-  "browserslist": [
+-    "defaults"
+-  ],
+   "prisma": {
+     "schema": "db/schema.prisma"
+   },
+@@ -32,13 +29,13 @@
+     ]
+   },
+   "dependencies": {
+-    "prisma": "~2.16",
+-    "@prisma/client": "~2.16",
+-    "blitz": "0.30.0-canary.15",
++    "prisma": "~2.17",
++    "@prisma/client": "~2.17",
++    "blitz": "0.31.1",
+     "react": "0.0.0-experimental-3310209d0",
+     "react-dom": "0.0.0-experimental-3310209d0",
+     "react-error-boundary": "3.1.1",
+-    "typescript": "4.2.3",
++    "typescript": "~4.1",
+     "zod": "1.11.11",
+     "final-form": "4.20.2",
+     "react-final-form": "6.5.2"
+diff --git a/BlitzDiffApp/test/utils.tsx b/BlitzDiffApp/test/utils.tsx
+index 856e68186..4bdf86ac3 100644
+--- a/BlitzDiffApp/test/utils.tsx
++++ b/BlitzDiffApp/test/utils.tsx
+@@ -1,4 +1,3 @@
+-import React from "react"
+ import { RouterContext, BlitzRouter } from "blitz"
+ import { render as defaultRender } from "@testing-library/react"
+ import { renderHook as defaultRenderHook } from "@testing-library/react-hooks"
+@@ -71,6 +70,7 @@ export const mockRouter: BlitzRouter = {
+   params: {},
+   query: {},
+   isReady: true,
++  isLocaleDomain: false,
+   push: jest.fn(),
+   replace: jest.fn(),
+   reload: jest.fn(),
+diff --git a/BlitzDiffApp/types.d.ts b/BlitzDiffApp/types.d.ts
+new file mode 100644
+index 000000000..d35eda64a
+--- /dev/null
++++ b/BlitzDiffApp/types.d.ts
+@@ -0,0 +1,8 @@
++declare module "*.module.scss" {
++  const content: { [className: string]: string }
++  export default content
++}
++declare module "*.module.css" {
++  const content: { [className: string]: string }
++  export default content
++}
+diff --git a/BlitzDiffApp/types.ts b/BlitzDiffApp/types.ts
+index cd9e61011..82209331c 100644
+--- a/BlitzDiffApp/types.ts
++++ b/BlitzDiffApp/types.ts
+@@ -1,5 +1,4 @@
+-import { DefaultCtx, SessionContext } from "blitz"
+-import { SimpleRolesIsAuthorized } from "@blitzjs/server"
++import { DefaultCtx, SessionContext, SimpleRolesIsAuthorized } from "blitz"
+ import { User } from "db"
+ 
+ // Note: You should switch to Postgres and then use a DB enum for role type
