@@ -1,0 +1,18 @@
+diff --git a/BlitzDiffApp/db/migrations/20210306002332_initial_migration/migration.sql b/BlitzDiffApp/db/migrations/20210306002559_initial_migration/migration.sql
+similarity index 100%
+rename from BlitzDiffApp/db/migrations/20210306002332_initial_migration/migration.sql
+rename to BlitzDiffApp/db/migrations/20210306002559_initial_migration/migration.sql
+diff --git a/BlitzDiffApp/types.d.ts b/BlitzDiffApp/types.d.ts
+deleted file mode 100644
+index d35eda64a..000000000
+--- a/BlitzDiffApp/types.d.ts
++++ /dev/null
+@@ -1,8 +0,0 @@
+-declare module "*.module.scss" {
+-  const content: { [className: string]: string }
+-  export default content
+-}
+-declare module "*.module.css" {
+-  const content: { [className: string]: string }
+-  export default content
+-}
