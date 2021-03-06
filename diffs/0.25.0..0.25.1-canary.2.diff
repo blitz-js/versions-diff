@@ -1,0 +1,23 @@
+diff --git a/BlitzDiffApp/.prettierignore b/BlitzDiffApp/.prettierignore
+index c61fdf72d..ad8c486b6 100644
+--- a/BlitzDiffApp/.prettierignore
++++ b/BlitzDiffApp/.prettierignore
+@@ -3,3 +3,5 @@
+ *.ico
+ *.lock
+ db/migrations
++.next
++.blitz
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index fa6a8f436..f659cf960 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -33,7 +33,7 @@
+   "dependencies": {
+     "@prisma/cli": "2.18.0",
+     "@prisma/client": "2.18.0",
+-    "blitz": "0.31.1",
++    "blitz": "0.30.0-canary.15",
+     "react": "0.0.0-experimental-4ead6b530",
+     "react-dom": "0.0.0-experimental-4ead6b530",
+     "react-error-boundary": "2.3.2",
