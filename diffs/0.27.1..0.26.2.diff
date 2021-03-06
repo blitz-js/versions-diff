@@ -1,0 +1,33 @@
+diff --git a/BlitzDiffApp/app/hooks/useCurrentUser.ts b/BlitzDiffApp/app/hooks/useCurrentUser.ts
+index 2938468c7..47ebaf5ee 100644
+--- a/BlitzDiffApp/app/hooks/useCurrentUser.ts
++++ b/BlitzDiffApp/app/hooks/useCurrentUser.ts
+@@ -1,7 +1,10 @@
+-import { useQuery } from "blitz"
++import { useQuery, useSession } from "blitz"
+ import getCurrentUser from "app/users/queries/getCurrentUser"
+ 
+ export const useCurrentUser = () => {
+-  const [user] = useQuery(getCurrentUser, null)
+-  return user
++  // We wouldn't have to useSession() here, but doing so improves perf on initial
++  // load since we can skip the getCurrentUser() request.
++  const session = useSession()
++  const [user] = useQuery(getCurrentUser, null, { enabled: !!session.userId })
++  return session.userId ? user : null
+ }
+diff --git a/BlitzDiffApp/package.json b/BlitzDiffApp/package.json
+index 6fda6458c..fa6a8f436 100644
+--- a/BlitzDiffApp/package.json
++++ b/BlitzDiffApp/package.json
+@@ -31,8 +31,8 @@
+     ]
+   },
+   "dependencies": {
+-    "@prisma/cli": "~2.12",
+-    "@prisma/client": "~2.12",
++    "@prisma/cli": "2.18.0",
++    "@prisma/client": "2.18.0",
+     "blitz": "0.31.1",
+     "react": "0.0.0-experimental-4ead6b530",
+     "react-dom": "0.0.0-experimental-4ead6b530",
